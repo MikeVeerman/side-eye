@@ -2,7 +2,7 @@
 
 import { createServer, type ServerResponse } from "node:http";
 import { PAGE } from "./page.js";
-import type { Finding } from "./types.js";
+import type { Config, Finding } from "./types.js";
 
 export interface SideEyeServer {
   url: string;
@@ -11,7 +11,7 @@ export interface SideEyeServer {
   close(): Promise<void>;
 }
 
-export function startServer(port: number): Promise<SideEyeServer> {
+export function startServer(port: number, cfg: Config): Promise<SideEyeServer> {
   let findings: Finding[] = [];
   const clients = new Set<ServerResponse>();
 
@@ -28,6 +28,9 @@ export function startServer(port: number): Promise<SideEyeServer> {
     } else if (url.pathname === "/api/findings") {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ findings }));
+    } else if (url.pathname === "/api/config") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(cfg));
     } else if (url.pathname === "/events") {
       res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" });
       res.flushHeaders();
@@ -39,7 +42,10 @@ export function startServer(port: number): Promise<SideEyeServer> {
     }
   });
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    server.once("error", (e: NodeJS.ErrnoException) => {
+      reject(e.code === "EADDRINUSE" ? new Error(`port ${port} is already in use (try --port)`) : e);
+    });
     server.listen(port, "127.0.0.1", () => {
       const addr = server.address();
       const actual = typeof addr === "object" && addr ? addr.port : port;

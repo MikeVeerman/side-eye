@@ -44,7 +44,7 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
-  const server = values["no-server"] ? null : await startServer(Number(values.port));
+  const server = values["no-server"] ? null : await startServer(Number(values.port), cfg);
   console.log(`side-eye watching ${repo} (source files only, ctrl-c to stop)`);
   if (server) console.log(`page: ${server.url}`);
   await watch(repo, client, cfg, {
