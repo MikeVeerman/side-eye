@@ -52,6 +52,8 @@ async function main(argv: string[]): Promise<number> {
     onStart: (path) => server?.clean(path),
     onFinding: (f) => { console.log(render(f)); server?.push(f); },
     onClean: (path) => console.log(`ok  ${path}`),
+    onConfig: (c) => console.log(`.side-eye changed: ${c.rules.length} rules, re-checking every changed file`),
+    onConfigError: (e) => console.error(`.side-eye changed but could not be loaded, keeping old rules: ${e.message}`),
   });
   return 0;
 }

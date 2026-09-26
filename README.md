@@ -45,8 +45,12 @@ Committed in the target repo so the team shares one set of rules.
 ```
 
 Each rule is one yes/no question Jev answers per diff hunk. `label` is what you see, `question`
-is what Jev is asked. Keep them saying the same thing. Flags at or above `sure` print loud,
-between `maybe` and `sure` print dim, the rest stay silent.
+is what Jev is asked. Keep them saying the same thing, and keep the question to one sentence:
+explanation around it dilutes the answer. Flags at or above `sure` print loud, between `maybe`
+and `sure` print dim, the rest stay silent.
+
+Edit rules in the Rules tab of the page, or in the file by hand. Either way a running
+`side-eye watch` notices the change, reloads the rules and re-checks every changed file.
 
 ## Development
 

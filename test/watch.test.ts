@@ -68,3 +68,56 @@ describe("watch onStart", () => {
     expect(order).toEqual(["start a.py", "finding a.py"]);
   });
 });
+
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { CONFIG_FILE, saveConfig } from "../src/config.js";
+
+describe("watch reacts to .side-eye changes", () => {
+  it("reloads the rules and re-checks every changed source file", async () => {
+    const repo = makeRepo();
+    const live = { ...cfg };
+    saveConfig(repo, live);
+    touch(repo, "a.py", "import requests\n", 1);
+    const fake = new FakeClient();
+    const state = new Map<string, number>();
+    const cm = { value: -1 };
+    const reloaded: string[][] = [];
+    await watch(repo, fake, live, { rounds: 1, sleep: noSleep, seen: state, configMtime: cm, onConfig: (c) => reloaded.push(c.rules.map((r) => r.key)) });
+    expect(fake.states).toHaveLength(1);
+
+    const changed = { ...live, rules: [...RULES, { key: "money", label: "Money", question: "Money?" }] };
+    saveConfig(repo, changed);
+    const t = Date.now() / 1000 + 5;
+    const { utimesSync } = await import("node:fs");
+    utimesSync(join(repo, CONFIG_FILE), t, t);
+    await watch(repo, fake, live, { rounds: 1, sleep: noSleep, seen: state, configMtime: cm, onConfig: (c) => reloaded.push(c.rules.map((r) => r.key)) });
+    expect(fake.states).toHaveLength(2);
+    expect(live.rules.map((r) => r.key)).toContain("money");
+    expect(reloaded).toEqual([["network", "secrets", "auth", "money"]]);
+  });
+
+  it("keeps the old rules and reports the error when the file is broken", async () => {
+    const repo = makeRepo();
+    const live = { ...cfg };
+    saveConfig(repo, live);
+    const fake = new FakeClient();
+    const state = new Map<string, number>();
+    const cm = { value: -1 };
+    await watch(repo, fake, live, { rounds: 1, sleep: noSleep, seen: state, configMtime: cm });
+    const t = Date.now() / 1000 + 5;
+    writeFileSync(join(repo, CONFIG_FILE), '{"rules": []}');
+    const { utimesSync } = await import("node:fs");
+    utimesSync(join(repo, CONFIG_FILE), t, t);
+    const errors: string[] = [];
+    await watch(repo, fake, live, { rounds: 1, sleep: noSleep, seen: state, configMtime: cm, onConfigError: (e) => errors.push(e.message) });
+    expect(live.rules).toHaveLength(3);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/non-empty/);
+  });
+
+  it("does nothing special when there is no .side-eye file", async () => {
+    const repo = makeRepo();
+    await expect(watch(repo, new FakeClient(), { ...cfg }, { rounds: 2, sleep: noSleep })).resolves.toBeUndefined();
+  });
+});
