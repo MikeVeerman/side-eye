@@ -68,9 +68,13 @@ export const PAGE = `<!doctype html>
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
   .card.new { animation: pop 0.5s ease-out; }
   @keyframes pop { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
-  .card .head { cursor: pointer; }
-  .card .head::before { content: "▸"; color: var(--dim); font-size: 12px; margin-right: -4px; }
-  .card.open .head::before { content: "▾"; }
+  .card .head { cursor: pointer; margin: -6px -8px 10px; padding: 6px 8px; border-radius: 6px; }
+  .card .head:hover { background: var(--line); }
+  .fold { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; color: var(--ink);
+    background: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px 3px 8px; cursor: pointer; }
+  .fold svg { width: 12px; height: 12px; transition: transform 0.2s; }
+  .card.open .fold svg { transform: rotate(180deg); }
+  .card .head:hover .fold { border-color: var(--sure); color: var(--sure); }
   .diff { margin: 12px 0 0; padding: 10px 12px; background: var(--code); border: 1px solid var(--line); border-radius: 8px;
     font-size: 13px; line-height: 1.45; overflow-x: auto; white-space: pre; }
   .diff .add { color: var(--ok); }
@@ -79,7 +83,7 @@ export const PAGE = `<!doctype html>
   .head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; margin-bottom: 10px; }
   .path { font-weight: 600; }
   .lines, .time { color: var(--dim); font-size: 13px; }
-  .radius { margin-left: auto; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
+  .radius { margin-left: auto; margin-right: 4px; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
   .radius.service, .radius.system-wide { border-color: var(--sure); color: var(--sure); }
   .row { display: grid; grid-template-columns: 2ch 6ch 1fr 5ch; gap: 8px; align-items: center; padding: 4px 0; }
   .row .n { color: var(--dim); text-align: right; }
@@ -136,7 +140,8 @@ export const PAGE = `<!doctype html>
     }).join("");
     return '<article class="card' + (fresh ? " new" : "") + '"><div class="head"><span class="path">' + esc(f.path) +
       '</span><span class="lines">lines ' + esc(f.lines) + '</span><span class="time">' + when(f.at) +
-      '</span><span class="radius ' + esc(f.radius) + '">' + esc(f.radius) + '</span></div>' + rows +
+      '</span><span class="radius ' + esc(f.radius) + '">' + esc(f.radius) + '</span>' +
+      '<button class="fold" type="button" aria-expanded="false"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 4l4 4 4-4"/></svg><span>diff</span></button></div>' + rows +
       '<pre class="diff" hidden>' + diffHtml(f.diff) + '</pre></article>';
   }
 
@@ -154,6 +159,9 @@ export const PAGE = `<!doctype html>
     const pre = card.querySelector(".diff");
     pre.hidden = !pre.hidden;
     card.classList.toggle("open", !pre.hidden);
+    const btn = card.querySelector(".fold");
+    btn.setAttribute("aria-expanded", String(!pre.hidden));
+    btn.querySelector("span").textContent = pre.hidden ? "diff" : "hide";
   });
 
   for (const b of document.querySelectorAll("nav.tabs button")) {
