@@ -15,7 +15,7 @@ QUESTIONS = {
 
 LABELS = {
     "network": "Network call is made",
-    "secrets": "Secrets are exposed",
+    "secrets": "Secret or credential is read",
     "auth": "Auth or permissions change",
     "schema": "Database schema changes",
     "filesystem": "Files written outside project",

@@ -40,7 +40,7 @@ def test_render_numbers_rows_and_uses_labels():
     out = render(hunk(), answer(network=0.91, auth=0.85, secrets=0.6)).splitlines()
     assert out[1] == "  1. !! Network call is made          91%"
     assert out[2] == "  2. !! Auth or permissions change    85%"
-    assert out[3] == "  3. maybe Secrets are exposed        60%"
+    assert out[3] == "  3. maybe Secret or credential is read 60%"
 
 
 def test_render_is_quiet_when_nothing_flagged():
