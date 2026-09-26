@@ -20,7 +20,7 @@ export function toFinding(h: Hunk, a: Answer, rules: Rule[], blastRadius: string
     ...c.maybe.map(([key, p]) => ({ mark: "maybe" as const, key, p })),
   ].map((r, i) => ({ n: i + 1, mark: r.mark, key: r.key, label: labels[r.key] ?? r.key, p: r.p }));
   const top = a.blastRadius.indexOf(Math.max(...a.blastRadius));
-  return { path: h.path, lines: lineRange(h.header), radius: blastRadius[top], rows, at: Date.now() };
+  return { path: h.path, lines: lineRange(h.header), radius: blastRadius[top], rows, at: Date.now(), diff: h.text };
 }
 
 export function render(f: Finding): string {
