@@ -238,7 +238,7 @@ export const PAGE = `<!doctype html>
     const body = await r.json();
     if (!r.ok) { error = body.error; drawRules(); return false; }
     config = body; error = ""; editing = null; armed = null; drawRules();
-    status.textContent = "rules saved to .side-eye at " + when(Date.now()) + ". next check uses them.";
+    status.textContent = "rules saved to .side-eye at " + when(Date.now()) + ". re-checking your changes with the new rules.";
     return true;
   }
 
