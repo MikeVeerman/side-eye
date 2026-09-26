@@ -51,6 +51,7 @@ describe("server", () => {
     expect(body.findings[0].diff).toContain("+import requests");
     const html = await (await fetch(`${s.url}/`)).text();
     expect(html).toContain('class="diff"');
+    expect(html).toContain('class="fold"');
   });
 
   it("lists findings as json, newest first", async () => {
