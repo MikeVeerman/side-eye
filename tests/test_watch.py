@@ -44,7 +44,7 @@ def test_watch_checks_a_file_once_per_save(repo, capsys):
     watch(repo, fake, sure=0.8, maybe=0.5, rounds=3, sleep=lambda s: None)
     assert len(fake.states) == 1
     out = capsys.readouterr().out
-    assert "watching" in out and "a.py" in out and "network" in out
+    assert "watching" in out and "a.py" in out and "Network call" in out
 
 
 def test_watch_rechecks_after_another_save(repo):

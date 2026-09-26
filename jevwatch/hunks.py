@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 from dataclasses import dataclass
 
@@ -12,6 +13,14 @@ CAP = 2000  # characters per request, the state size jev-bench measured at
 class Hunk:
     path: str
     text: str
+    header: str = ""   # the "@@ ... @@" line this piece came from, kept when a hunk is split
+
+    @property
+    def lines(self) -> str:
+        """Line range in the new file, read from the @@ header. Jev answers per hunk, not per line."""
+        m = re.match(r"@@ -\S+ \+(\d+)(?:,(\d+))? @@", self.header or self.text)
+        start, count = int(m.group(1)), int(m.group(2) or 1)
+        return str(start) if count == 1 else f"{start}-{start + count - 1}"
 
 
 def _git(repo, *args) -> str:
@@ -46,11 +55,11 @@ def split_hunks(hunks: list[Hunk], cap: int = CAP) -> list[Hunk]:
         if len(h.text) <= cap:
             out.append(h)
             continue
-        lines, piece = h.text.split("\n"), []
+        lines, piece, header = h.text.split("\n"), [], h.text.split("\n", 1)[0]
         for line in lines:
             if piece and len("\n".join(piece + [line])) > cap:
-                out.append(Hunk(h.path, "\n".join(piece)))
+                out.append(Hunk(h.path, "\n".join(piece), header))
                 piece = []
             piece.append(line)
-        out.append(Hunk(h.path, "\n".join(piece)))
+        out.append(Hunk(h.path, "\n".join(piece), header))
     return out
