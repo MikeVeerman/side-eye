@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { defaultConfig } from "../src/config.js";
 import { startServer } from "../src/server.js";
 import type { Finding } from "../src/types.js";
 
@@ -7,12 +8,13 @@ const finding: Finding = {
   rows: [{ n: 1, mark: "!!", key: "network", label: "Network call is made", p: 0.91 }],
 };
 
+const cfg = { ...defaultConfig(), sure: 0.85 };
 let stop: (() => Promise<void>) | undefined;
 afterEach(async () => { await stop?.(); stop = undefined; });
 
 describe("server", () => {
   it("serves the page with the logo and the name", async () => {
-    const s = await startServer(0);
+    const s = await startServer(0, cfg);
     stop = s.close;
     const html = await (await fetch(`${s.url}/`)).text();
     expect(html).toContain("<svg");
@@ -20,8 +22,28 @@ describe("server", () => {
     expect(html).toContain("/events");
   });
 
+  it("has a flags tab and a rules tab", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    const html = await (await fetch(`${s.url}/`)).text();
+    expect(html).toContain('data-tab="flags"');
+    expect(html).toContain('data-tab="rules"');
+    expect(html).toContain("/api/config");
+  });
+
+  it("serves the loaded config as json", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    const r = await fetch(`${s.url}/api/config`);
+    expect(r.headers.get("content-type")).toContain("application/json");
+    const body = await r.json();
+    expect(body.sure).toBe(0.85);
+    expect(body.rules).toHaveLength(10);
+    expect(body.rules[0]).toEqual(cfg.rules[0]);
+  });
+
   it("lists findings as json, newest first", async () => {
-    const s = await startServer(0);
+    const s = await startServer(0, cfg);
     stop = s.close;
     s.push(finding);
     s.push({ ...finding, path: "src/b.py", at: 1700000001000 });
@@ -32,7 +54,7 @@ describe("server", () => {
   });
 
   it("clears older findings for the same file on a new save", async () => {
-    const s = await startServer(0);
+    const s = await startServer(0, cfg);
     stop = s.close;
     s.push(finding);
     s.clean("src/a.py");
@@ -43,7 +65,7 @@ describe("server", () => {
   });
 
   it("streams findings over server-sent events", async () => {
-    const s = await startServer(0);
+    const s = await startServer(0, cfg);
     stop = s.close;
     const res = await fetch(`${s.url}/events`);
     expect(res.headers.get("content-type")).toContain("text/event-stream");
@@ -56,8 +78,15 @@ describe("server", () => {
     await reader.cancel();
   });
 
+  it("fails clearly when the port is taken", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    const port = Number(new URL(s.url).port);
+    await expect(startServer(port, cfg)).rejects.toThrow(`port ${port} is already in use`);
+  });
+
   it("404s anything else", async () => {
-    const s = await startServer(0);
+    const s = await startServer(0, cfg);
     stop = s.close;
     expect((await fetch(`${s.url}/nope`)).status).toBe(404);
   });
