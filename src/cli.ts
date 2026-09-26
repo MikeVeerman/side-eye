@@ -4,7 +4,7 @@
 import { parseArgs } from "node:util";
 import { checkRepo } from "./checker.js";
 import { JevClient } from "./client.js";
-import { initConfig, loadConfig } from "./config.js";
+import { initConfig, loadConfig, saveConfig } from "./config.js";
 import { loadDotenv } from "./dotenv.js";
 import { render } from "./report.js";
 import { startServer } from "./server.js";
@@ -44,7 +44,7 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
-  const server = values["no-server"] ? null : await startServer(Number(values.port), cfg);
+  const server = values["no-server"] ? null : await startServer(Number(values.port), cfg, (c) => saveConfig(repo, c));
   console.log(`side-eye watching ${repo} (source files only, ctrl-c to stop)`);
   if (server) console.log(`page: ${server.url}`);
   await watch(repo, client, cfg, {

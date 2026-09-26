@@ -45,15 +45,33 @@ export function initConfig(repo: string): string {
   return p;
 }
 
+/** Throws a plain-language error if the rules cannot be used. Keys become question ids in the Jev request. */
+export function validateRules(rules: unknown): asserts rules is Rule[] {
+  if (!Array.isArray(rules) || rules.length === 0) throw new Error(`"rules" must be a non-empty list`);
+  const seen = new Set<string>();
+  for (const r of rules as Partial<Rule>[]) {
+    for (const f of ["key", "label", "question"] as const) {
+      if (typeof r[f] !== "string" || !r[f].trim()) throw new Error(`every rule needs a "${f}"`);
+    }
+    if (!/^[A-Za-z0-9_]+$/.test(r.key!)) throw new Error(`key "${r.key}" may only use letters, digits and underscores`);
+    if (r.key === "blast_radius") throw new Error(`key "blast_radius" is reserved`);
+    if (seen.has(r.key!)) throw new Error(`duplicate key "${r.key}"`);
+    seen.add(r.key!);
+  }
+}
+
 export function loadConfig(repo: string): Config {
   const p = join(repo, CONFIG_FILE);
   if (!existsSync(p)) throw new Error(`no ${CONFIG_FILE} in ${repo}. Run: side-eye init`);
   const raw = JSON.parse(readFileSync(p, "utf8")) as Partial<Config>;
-  if (!Array.isArray(raw.rules) || raw.rules.length === 0) throw new Error(`${CONFIG_FILE}: "rules" must be a non-empty list`);
-  for (const r of raw.rules as Partial<Rule>[]) {
-    for (const f of ["key", "label", "question"] as const) {
-      if (typeof r[f] !== "string" || !r[f]) throw new Error(`${CONFIG_FILE}: every rule needs a "${f}"`);
-    }
+  try {
+    validateRules(raw.rules);
+  } catch (e) {
+    throw new Error(`${CONFIG_FILE}: ${(e as Error).message}`);
   }
-  return { ...defaultConfig(), ...raw, rules: raw.rules as Rule[] };
+  return { ...defaultConfig(), ...raw, rules: raw.rules };
+}
+
+export function saveConfig(repo: string, cfg: Config): void {
+  writeFileSync(join(repo, CONFIG_FILE), JSON.stringify(cfg, null, 2) + "\n");
 }

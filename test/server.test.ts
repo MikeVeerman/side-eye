@@ -97,6 +97,50 @@ describe("server", () => {
     await expect(startServer(port, cfg)).rejects.toThrow(`port ${port} is already in use`);
   });
 
+  it("has add, edit and delete controls in the rules tab", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    const html = await (await fetch(`${s.url}/`)).text();
+    expect(html).toContain('id="add-rule"');
+    expect(html).toContain('data-act="edit"');
+    expect(html).toContain('data-act="delete"');
+    expect(html).toContain("/api/rules");
+  });
+
+  it("PUT /api/rules validates, updates the live config and calls onSave", async () => {
+    const live = { ...defaultConfig() };
+    const saved: unknown[] = [];
+    const s = await startServer(0, live, (c) => saved.push(structuredClone(c)));
+    stop = s.close;
+    const rules = [{ key: "network", label: "Net", question: "Net?" }, { key: "new_one", label: "New", question: "New?" }];
+    const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ rules }), headers: { "content-type": "application/json" } });
+    expect(r.status).toBe(200);
+    expect((await r.json()).rules).toEqual(rules);
+    expect(live.rules).toEqual(rules);
+    expect(live.sure).toBe(0.8);
+    expect(saved).toHaveLength(1);
+    expect((saved[0] as { rules: unknown }).rules).toEqual(rules);
+  });
+
+  it("PUT /api/rules rejects bad rules with a message and changes nothing", async () => {
+    const live = { ...defaultConfig() };
+    const saved: unknown[] = [];
+    const s = await startServer(0, live, (c) => saved.push(c));
+    stop = s.close;
+    const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ rules: [{ key: "a b", label: "A", question: "A?" }] }) });
+    expect(r.status).toBe(400);
+    expect((await r.json()).error).toMatch(/letters, digits and underscores/);
+    expect(live.rules).toHaveLength(10);
+    expect(saved).toEqual([]);
+  });
+
+  it("PUT /api/rules rejects malformed json", async () => {
+    const s = await startServer(0, { ...defaultConfig() });
+    stop = s.close;
+    const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: "{nope" });
+    expect(r.status).toBe(400);
+  });
+
   it("404s anything else", async () => {
     const s = await startServer(0, cfg);
     stop = s.close;
