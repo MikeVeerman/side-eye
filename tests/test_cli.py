@@ -74,3 +74,12 @@ def test_main_runs_check_in_cwd(repo, monkeypatch, capsys):
     monkeypatch.setattr(cli, "JevClient", lambda: FakeClient())
     assert cli.main(["check", "--sure", "0.85"]) == 0
     assert "network" in capsys.readouterr().out
+
+
+def test_main_watch_subcommand(repo, monkeypatch, capsys):
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    monkeypatch.setattr(cli, "JevClient", lambda: FakeClient())
+    monkeypatch.setattr("jevwatch.watch.time.sleep", lambda s: None)
+    assert cli.main(["watch", "--rounds", "1"]) == 0
+    assert "watching" in capsys.readouterr().out

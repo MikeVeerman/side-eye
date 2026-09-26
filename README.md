@@ -10,6 +10,7 @@ uv venv && uv pip install -e ".[dev]"
 echo "TYPESAFE_API_KEY=..." > .env
 jevwatch check              # every changed source file
 jevwatch check src/a.py     # just these
+jevwatch watch              # re-check a source file each time you save it
 ```
 
 Each diff hunk is sent with ten yes/no questions (network, secrets, auth, schema, ...) and one
