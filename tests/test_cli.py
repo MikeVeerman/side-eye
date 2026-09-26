@@ -39,7 +39,7 @@ def test_check_only_sends_whitelisted_changed_files(repo, capsys):
     assert len(fake.states) == 1 and "+import requests" in fake.states[0]
     assert not any("x@y.z" in s for s in fake.states)
     out = capsys.readouterr().out
-    assert "a.py" in out and "network" in out
+    assert "a.py" in out and "Network call is made" in out
 
 
 def test_check_with_explicit_paths_refuses_non_source(repo, capsys):
@@ -73,7 +73,7 @@ def test_main_runs_check_in_cwd(repo, monkeypatch, capsys):
     monkeypatch.setenv("TYPESAFE_API_KEY", "k")
     monkeypatch.setattr(cli, "JevClient", lambda: FakeClient())
     assert cli.main(["check", "--sure", "0.85"]) == 0
-    assert "network" in capsys.readouterr().out
+    assert "Network call" in capsys.readouterr().out
 
 
 def test_main_watch_subcommand(repo, monkeypatch, capsys):

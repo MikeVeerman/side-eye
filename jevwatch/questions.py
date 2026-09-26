@@ -13,6 +13,19 @@ QUESTIONS = {
     "background": "Does this code change start a background job, thread, timer or scheduled task?",
 }
 
+LABELS = {
+    "network": "Network call is made",
+    "secrets": "Secrets are exposed",
+    "auth": "Auth or permissions change",
+    "schema": "Database schema changes",
+    "filesystem": "Files written outside project",
+    "dependency": "Dependency added or changed",
+    "swallow": "Exception is swallowed",
+    "public_api": "Public API changes",
+    "logging": "User data may be logged",
+    "background": "Background task started",
+}
+
 BLAST_RADIUS = ["local", "module", "service", "system-wide"]
 
 

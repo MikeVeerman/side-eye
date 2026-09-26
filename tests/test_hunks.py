@@ -64,3 +64,19 @@ def test_split_hunks_keeps_each_piece_under_cap():
 def test_split_hunks_leaves_small_hunk_alone():
     small = Hunk("a.py", "+x = 1")
     assert split_hunks([small], cap=500) == [small]
+
+
+def test_hunk_line_range_comes_from_header():
+    h = Hunk("a.py", "@@ -1,2 +8,16 @@ def f():\n+x = 1")
+    assert h.lines == "8-23"
+
+
+def test_hunk_line_range_single_line():
+    assert Hunk("a.py", "@@ -0,0 +1 @@\n+x = 1").lines == "1"
+
+
+def test_split_hunks_pieces_keep_start_line_of_hunk():
+    big = Hunk("a.py", "@@ -1,3 +4,400 @@\n" + "\n".join(f"+line {i}" for i in range(400)))
+    parts = split_hunks([big], cap=500)
+    assert parts[0].lines == "4-403"
+    assert all(p.lines == "4-403" for p in parts)

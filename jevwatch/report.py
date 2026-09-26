@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from .client import Answer
 from .hunks import Hunk
-from .questions import BLAST_RADIUS
+from .questions import BLAST_RADIUS, LABELS
 
 
 def classify(a: Answer, sure: float, maybe: float):
@@ -18,7 +18,8 @@ def render(h: Hunk, a: Answer, sure: float = 0.8, maybe: float = 0.5) -> str:
     if not sure_flags and not maybe_flags:
         return ""
     radius = BLAST_RADIUS[max(range(len(a.blast_radius)), key=a.blast_radius.__getitem__)]
-    lines = [f"{h.path}  [{radius}]"]
-    lines += [f"  !! {k:<11} {p:.0%}" for k, p in sure_flags]
-    lines += [f"  maybe {k:<8} {p:.0%}" for k, p in maybe_flags]
+    lines = [f"{h.path}  lines {h.lines}  [{radius}]"]
+    rows = [("!!", k, p) for k, p in sure_flags] + [("maybe", k, p) for k, p in maybe_flags]
+    for n, (mark, k, p) in enumerate(rows, 1):
+        lines.append(f"  {n}. {mark} {LABELS[k]:<{31 - len(mark)}} {p:.0%}")
     return "\n".join(lines)
