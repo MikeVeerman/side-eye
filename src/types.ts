@@ -38,6 +38,7 @@ export interface Finding {
   radius: string;
   rows: Row[];
   at: number;
+  diff: string; // the hunk that was sent, so the page can show what was judged
 }
 
 export interface Client {

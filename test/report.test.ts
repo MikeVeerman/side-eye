@@ -38,6 +38,10 @@ describe("toFinding", () => {
     ]);
     expect(typeof f.at).toBe("number");
   });
+  it("carries the hunk diff so the page can show it", () => {
+    const f = toFinding(hunk, answer({ network: 0.91 }), RULES, RADIUS, 0.8, 0.5)!;
+    expect(f.diff).toBe(hunk.text);
+  });
 });
 
 describe("render", () => {

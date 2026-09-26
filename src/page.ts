@@ -20,12 +20,12 @@ export const PAGE = `<!doctype html>
 <style>
   :root {
     --bg: #1d1f21; --panel: #26282b; --ink: #e8dcc3; --dim: #9a917d; --line: #3a3d41;
-    --sure: #e0a06a; --maybe: #8aa0b3; --ok: #8fb58a; --eye-white: #f2e9d4; --iris: #6b8f9e; --pupil: #1d1f21;
+    --sure: #e0a06a; --maybe: #8aa0b3; --ok: #8fb58a; --del: #d98b80; --code: #1a1c1e; --eye-white: #f2e9d4; --iris: #6b8f9e; --pupil: #1d1f21;
   }
   @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
       --bg: #f6f1e6; --panel: #fffaf0; --ink: #2a2622; --dim: #7a7264; --line: #e2d9c6;
-      --sure: #b8642a; --maybe: #4f6b83; --ok: #4d7f47; --eye-white: #ffffff; --iris: #4f7f92; --pupil: #2a2622;
+      --sure: #b8642a; --maybe: #4f6b83; --ok: #4d7f47; --del: #b5473a; --code: #f1ebdd; --eye-white: #ffffff; --iris: #4f7f92; --pupil: #2a2622;
     }
   }
   * { box-sizing: border-box; }
@@ -68,6 +68,14 @@ export const PAGE = `<!doctype html>
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
   .card.new { animation: pop 0.5s ease-out; }
   @keyframes pop { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .card .head { cursor: pointer; }
+  .card .head::before { content: "▸"; color: var(--dim); font-size: 12px; margin-right: -4px; }
+  .card.open .head::before { content: "▾"; }
+  .diff { margin: 12px 0 0; padding: 10px 12px; background: var(--code); border: 1px solid var(--line); border-radius: 8px;
+    font-size: 13px; line-height: 1.45; overflow-x: auto; white-space: pre; }
+  .diff .add { color: var(--ok); }
+  .diff .del { color: var(--del); }
+  .diff .hdr { color: var(--dim); }
   .head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; margin-bottom: 10px; }
   .path { font-weight: 600; }
   .lines, .time { color: var(--dim); font-size: 13px; }
@@ -111,6 +119,13 @@ export const PAGE = `<!doctype html>
   function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   function when(t) { return new Date(t).toLocaleTimeString(); }
 
+  function diffHtml(text) {
+    return text.split("\\n").map((l) => {
+      const cls = l.startsWith("@@") ? "hdr" : l.startsWith("+") ? "add" : l.startsWith("-") ? "del" : "";
+      return '<span class="' + cls + '">' + esc(l) + '</span>';
+    }).join("\\n");
+  }
+
   function card(f, fresh) {
     const rows = f.rows.map((r) => {
       const pct = Math.round(r.p * 100);
@@ -121,7 +136,8 @@ export const PAGE = `<!doctype html>
     }).join("");
     return '<article class="card' + (fresh ? " new" : "") + '"><div class="head"><span class="path">' + esc(f.path) +
       '</span><span class="lines">lines ' + esc(f.lines) + '</span><span class="time">' + when(f.at) +
-      '</span><span class="radius ' + esc(f.radius) + '">' + esc(f.radius) + '</span></div>' + rows + '</article>';
+      '</span><span class="radius ' + esc(f.radius) + '">' + esc(f.radius) + '</span></div>' + rows +
+      '<pre class="diff" hidden>' + diffHtml(f.diff) + '</pre></article>';
   }
 
   function draw(freshAt) {
@@ -130,6 +146,15 @@ export const PAGE = `<!doctype html>
   }
 
   fetch("/api/findings").then((r) => r.json()).then((d) => { findings = d.findings; draw(); });
+
+  list.addEventListener("click", (e) => {
+    const head = e.target.closest(".head");
+    if (!head) return;
+    const card = head.parentElement;
+    const pre = card.querySelector(".diff");
+    pre.hidden = !pre.hidden;
+    card.classList.toggle("open", !pre.hidden);
+  });
 
   for (const b of document.querySelectorAll("nav.tabs button")) {
     b.addEventListener("click", () => {

@@ -5,6 +5,7 @@ import type { Finding } from "../src/types.js";
 
 const finding: Finding = {
   path: "src/a.py", lines: "8-23", radius: "module", at: 1700000000000,
+  diff: "@@ -1,2 +8,16 @@\n-old()\n+import requests\n+requests.get(url)",
   rows: [{ n: 1, mark: "!!", key: "network", label: "Network call is made", p: 0.91 }],
 };
 
@@ -40,6 +41,16 @@ describe("server", () => {
     expect(body.sure).toBe(0.85);
     expect(body.rules).toHaveLength(10);
     expect(body.rules[0]).toEqual(cfg.rules[0]);
+  });
+
+  it("includes the diff in the findings json and has a diff panel in the page", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    s.push(finding);
+    const body = await (await fetch(`${s.url}/api/findings`)).json();
+    expect(body.findings[0].diff).toContain("+import requests");
+    const html = await (await fetch(`${s.url}/`)).text();
+    expect(html).toContain('class="diff"');
   });
 
   it("lists findings as json, newest first", async () => {
