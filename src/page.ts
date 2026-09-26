@@ -60,10 +60,26 @@ export const PAGE = `<!doctype html>
   .meta dt { color: var(--dim); }
   .meta dd { margin: 0; }
   .chip { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; margin: 2px 4px 2px 0; font-size: 12px; color: var(--dim); }
-  .rule { border-top: 1px solid var(--line); padding: 12px 0; }
+  .rule { border-top: 1px solid var(--line); padding: 12px 0; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
   .rule .label { font-weight: 600; }
   .rule .key { color: var(--dim); font-size: 12px; margin-left: 10px; }
-  .rule .q { color: var(--dim); margin: 4px 0 0; }
+  .rule .q { color: var(--dim); margin: 0; grid-column: 1; }
+  .rule > div:first-child { grid-column: 1; grid-row: 1; }
+  .rule .acts { grid-column: 2; grid-row: 1 / 3; align-self: start; display: flex; gap: 6px; }
+  .btn { font: inherit; font-size: 12px; color: var(--ink); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  .btn:hover { border-color: var(--sure); color: var(--sure); }
+  .btn.primary { background: var(--sure); border-color: var(--sure); color: var(--bg); font-weight: 600; }
+  .btn.primary:hover { color: var(--bg); filter: brightness(1.1); }
+  .btn.danger:hover, .btn.armed { border-color: var(--del); color: var(--del); }
+  form.rule-form { border-top: 1px solid var(--line); padding: 12px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  form.rule-form.add { border: 1px dashed var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; }
+  form.rule-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--dim); }
+  form.rule-form label.wide { grid-column: 1 / 3; }
+  form.rule-form input { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  form.rule-form input:focus { outline: 2px solid var(--maybe); outline-offset: 1px; }
+  form.rule-form .acts { grid-column: 1 / 3; display: flex; gap: 8px; align-items: center; }
+  .err { color: var(--del); font-size: 13px; margin-left: auto; }
+  @media (max-width: 480px) { form.rule-form { grid-template-columns: 1fr; } form.rule-form label.wide, form.rule-form .acts { grid-column: 1; } }
   .empty { border: 1px dashed var(--line); border-radius: 10px; padding: 40px 16px; text-align: center; color: var(--dim); }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
   .card.new { animation: pop 0.5s ease-out; }
@@ -171,17 +187,85 @@ export const PAGE = `<!doctype html>
     });
   }
 
+  // ---- rules tab: add, edit, delete. Every change is validated by the server and written to .side-eye.
+  const rulesEl = document.getElementById("rules");
+  let config = null;
+  let editing = null;   // key of the rule being edited
+  let armed = null;     // key of the rule whose delete button was clicked once
+  let error = "";
+
   function pct(x) { return Math.round(x * 100) + "%"; }
-  fetch("/api/config").then((r) => r.json()).then((c) => {
-    const rules = c.rules.map((r) => '<div class="rule"><span class="label">' + esc(r.label) + '</span><span class="key">' + esc(r.key) +
-      '</span><p class="q">' + esc(r.question) + '</p></div>').join("");
-    document.getElementById("ruleset").outerHTML =
+
+  function field(name, label, value, wide, placeholder) {
+    return '<label class="' + (wide ? "wide" : "") + '">' + label + '<input name="' + name + '" value="' + esc(value) +
+      '" placeholder="' + esc(placeholder || "") + '" required></label>';
+  }
+
+  function ruleForm(r, cls, submitText) {
+    return '<form class="rule-form ' + cls + '" data-key="' + esc(r.key) + '">' +
+      field("label", "label (what you see)", r.label, false, "Network call is made") +
+      field("key", "key (letters, digits, underscores)", r.key, false, "network") +
+      field("question", "question (what Jev is asked, say the same thing as the label)", r.question, true, "Does this code change make a network call?") +
+      '<div class="acts"><button class="btn primary" type="submit">' + submitText + '</button>' +
+      (cls === "add" ? "" : '<button class="btn" type="button" data-act="cancel">cancel</button>') +
+      (error ? '<span class="err">' + esc(error) + '</span>' : "") + '</div></form>';
+  }
+
+  function ruleRow(r) {
+    const del = armed === r.key ? '<button class="btn armed" data-act="delete" data-key="' + esc(r.key) + '">really delete?</button>'
+                                : '<button class="btn danger" data-act="delete" data-key="' + esc(r.key) + '">delete</button>';
+    return '<div class="rule"><div><span class="label">' + esc(r.label) + '</span><span class="key">' + esc(r.key) + '</span></div>' +
+      '<div class="acts"><button class="btn" data-act="edit" data-key="' + esc(r.key) + '">edit</button>' + del + '</div>' +
+      '<p class="q">' + esc(r.question) + '</p></div>';
+  }
+
+  function drawRules() {
+    const c = config;
+    if (!c) return;
+    const rules = c.rules.map((r) => (editing === r.key ? ruleForm(r, "edit", "save") : ruleRow(r))).join("");
+    rulesEl.innerHTML =
       '<dl class="meta"><dt>sure</dt><dd>' + pct(c.sure) + ' and up prints loud</dd>' +
       '<dt>maybe</dt><dd>' + pct(c.maybe) + ' to ' + pct(c.sure) + ' prints dim</dd>' +
       '<dt>blast radius</dt><dd>' + c.blastRadius.map((b) => '<span class="chip">' + esc(b) + '</span>').join("") + '</dd>' +
       '<dt>sent</dt><dd>' + c.extensions.map((e) => '<span class="chip">' + esc(e) + '</span>').join("") + '<br><small>only these extensions ever leave the machine</small></dd></dl>' +
+      '<h2 style="font-size:15px;margin:0 0 10px">add a rule</h2>' +
+      '<div id="add-rule">' + ruleForm({ key: "", label: "", question: "" }, "add", "add rule") + '</div>' +
       '<h2 style="font-size:15px;margin:0 0 4px">' + c.rules.length + ' rules, one yes/no question each</h2>' + rules;
+  }
+
+  async function saveRules(rules) {
+    const r = await fetch("/api/rules", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ rules }) });
+    const body = await r.json();
+    if (!r.ok) { error = body.error; drawRules(); return false; }
+    config = body; error = ""; editing = null; armed = null; drawRules();
+    status.textContent = "rules saved to .side-eye at " + when(Date.now()) + ". next check uses them.";
+    return true;
+  }
+
+  rulesEl.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-act]");
+    if (!b) return;
+    const key = b.dataset.key;
+    if (b.dataset.act === "edit") { editing = key; armed = null; error = ""; drawRules(); }
+    if (b.dataset.act === "cancel") { editing = null; error = ""; drawRules(); }
+    if (b.dataset.act === "delete") {
+      if (armed !== key) { armed = key; drawRules(); return; }
+      saveRules(config.rules.filter((r) => r.key !== key));
+    }
   });
+
+  rulesEl.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
+    const rule = { key: data.key.trim(), label: data.label.trim(), question: data.question.trim() };
+    const isAdd = form.classList.contains("add");
+    const rules = isAdd ? [...config.rules, rule] : config.rules.map((r) => (r.key === form.dataset.key ? rule : r));
+    if (isAdd) editing = ""; else editing = form.dataset.key;
+    saveRules(rules);
+  });
+
+  fetch("/api/config").then((r) => r.json()).then((c) => { config = c; drawRules(); });
 
   const es = new EventSource("/events");
   es.onopen = () => { dot.className = "dot"; status.textContent = "watching. flags appear here as you save."; };

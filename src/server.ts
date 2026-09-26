@@ -1,6 +1,7 @@
 // A small local server so the flags also show up in a browser. Node's http module, nothing else.
 
-import { createServer, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { validateRules } from "./config.js";
 import { PAGE } from "./page.js";
 import type { Config, Finding } from "./types.js";
 
@@ -11,7 +12,21 @@ export interface SideEyeServer {
   close(): Promise<void>;
 }
 
-export function startServer(port: number, cfg: Config): Promise<SideEyeServer> {
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve) => {
+    let data = "";
+    req.on("data", (c) => { data += c; });
+    req.on("end", () => resolve(data));
+  });
+}
+
+function json(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
+/** cfg is shared with the watcher and updated in place, so a saved rule applies to the next check. */
+export function startServer(port: number, cfg: Config, onSave?: (cfg: Config) => void): Promise<SideEyeServer> {
   let findings: Finding[] = [];
   const clients = new Set<ServerResponse>();
 
@@ -29,8 +44,19 @@ export function startServer(port: number, cfg: Config): Promise<SideEyeServer> {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ findings }));
     } else if (url.pathname === "/api/config") {
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify(cfg));
+      json(res, 200, cfg);
+    } else if (url.pathname === "/api/rules" && req.method === "PUT") {
+      readBody(req).then((body) => {
+        try {
+          const rules = JSON.parse(body).rules;
+          validateRules(rules);
+          cfg.rules = rules;
+          onSave?.(cfg);
+          json(res, 200, cfg);
+        } catch (e) {
+          json(res, 400, { error: (e as Error).message });
+        }
+      });
     } else if (url.pathname === "/events") {
       res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" });
       res.flushHeaders();

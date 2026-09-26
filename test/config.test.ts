@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { CONFIG_FILE, defaultConfig, initConfig, loadConfig } from "../src/config.js";
+import { CONFIG_FILE, defaultConfig, initConfig, loadConfig, saveConfig, validateRules } from "../src/config.js";
 import { makeRepo } from "./helpers.js";
 
 describe("config", () => {
@@ -61,5 +61,35 @@ describe("config", () => {
     expect(new Set(c.rules.map((r) => r.key)).size).toBe(10);
     for (const r of c.rules) expect(r.question.endsWith("?")).toBe(true);
     expect(c.rules.find((r) => r.key === "secrets")!.label).toBe("Secret or credential is read");
+  });
+});
+
+describe("validateRules", () => {
+  const ok = [{ key: "network", label: "Network", question: "Net?" }];
+  it("accepts a good list", () => { expect(() => validateRules(ok)).not.toThrow(); });
+  it("rejects an empty list", () => { expect(() => validateRules([])).toThrow(/non-empty/); });
+  it("rejects a missing field", () => {
+    expect(() => validateRules([{ key: "a", label: "A" }])).toThrow(/question/);
+    expect(() => validateRules([{ key: "a", question: "A?" }])).toThrow(/label/);
+  });
+  it("rejects duplicate keys", () => {
+    expect(() => validateRules([...ok, { key: "network", label: "B", question: "B?" }])).toThrow(/duplicate key "network"/);
+  });
+  it("rejects a key that is not a plain identifier", () => {
+    expect(() => validateRules([{ key: "has space", label: "A", question: "A?" }])).toThrow(/letters, digits and underscores/);
+    expect(() => validateRules([{ key: "Ok_1", label: "A", question: "A?" }])).not.toThrow();
+  });
+  it("rejects the reserved key blast_radius", () => {
+    expect(() => validateRules([{ key: "blast_radius", label: "A", question: "A?" }])).toThrow(/reserved/);
+  });
+});
+
+describe("saveConfig", () => {
+  it("writes the file so loadConfig reads the same thing back", () => {
+    const repo = makeRepo();
+    const c = { ...defaultConfig(), sure: 0.9, rules: [{ key: "x", label: "X", question: "X?" }] };
+    saveConfig(repo, c);
+    expect(loadConfig(repo)).toEqual(c);
+    expect(readFileSync(join(repo, CONFIG_FILE), "utf8").endsWith("\n")).toBe(true);
   });
 });
