@@ -2,7 +2,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { validateRules } from "./config.js";
-import { PAGE } from "./page.js";
+import { servePage } from "./page.js";
 import type { Config, Finding } from "./types.js";
 
 export interface SideEyeServer {
@@ -37,10 +37,8 @@ export function startServer(port: number, cfg: Config, onSave?: (cfg: Config) =>
 
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://localhost");
-    if (url.pathname === "/") {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(PAGE);
-    } else if (url.pathname === "/api/findings") {
+    if (servePage(url.pathname, res)) return;
+    if (url.pathname === "/api/findings") {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ findings }));
     } else if (url.pathname === "/api/config") {

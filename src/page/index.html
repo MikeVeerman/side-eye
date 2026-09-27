@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>side-eye</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <header>
+    <svg class="logo" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="side-eye logo">
+      <path class="brow" d="M16 28 Q 58 4 106 18" fill="none" stroke-width="7" stroke-linecap="round"/>
+      <path class="white" d="M8 52 Q 60 12 112 52 Q 60 92 8 52 Z"/>
+      <g class="gaze">
+        <circle class="iris" cx="84" cy="52" r="15"/>
+        <circle class="pupil" cx="88" cy="52" r="7"/>
+        <circle class="glint" cx="92" cy="47" r="3"/>
+      </g>
+      <path class="lid" d="M8 52 Q 60 12 112 52 Q 60 38 8 52 Z"/>
+    </svg>
+    <div>
+      <h1>side-eye</h1>
+      <p class="tag">giving your side effects the side-eye</p>
+    </div>
+  </header>
+  <div class="status"><span class="dot" id="dot"></span><span id="status">connecting to /events</span></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="flags" aria-selected="true">Flags</button>
+    <button role="tab" data-tab="rules" aria-selected="false">Rules</button>
+  </nav>
+  <section class="panel" id="flags" role="tabpanel"><div id="list"><div class="empty">Nothing to side-eye yet. Save a source file.</div></div></section>
+  <section class="panel" id="rules" role="tabpanel" hidden><div id="ruleset" class="empty">Loading .side-eye</div></section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

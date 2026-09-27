@@ -11,7 +11,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cp -r src/page dist/page",
     "test": "vitest run --coverage",
     "prepublishOnly": "npm run build"
   },

@@ -17,10 +17,11 @@ describe("server", () => {
   it("serves the page with the logo and the name", async () => {
     const s = await startServer(0, cfg);
     stop = s.close;
-    const html = await (await fetch(`${s.url}/`)).text();
+    const r = await fetch(`${s.url}/`);
+    expect(r.headers.get("content-type")).toContain("text/html");
+    const html = await r.text();
     expect(html).toContain("<svg");
     expect(html).toContain("side-eye");
-    expect(html).toContain("/events");
   });
 
   it("has a flags tab and a rules tab", async () => {
@@ -29,7 +30,29 @@ describe("server", () => {
     const html = await (await fetch(`${s.url}/`)).text();
     expect(html).toContain('data-tab="flags"');
     expect(html).toContain('data-tab="rules"');
-    expect(html).toContain("/api/config");
+  });
+
+  it("serves the stylesheet and the script the page links to", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    const html = await (await fetch(`${s.url}/`)).text();
+    expect(html).toContain('href="/style.css"');
+    expect(html).toContain('src="/app.js"');
+    const css = await fetch(`${s.url}/style.css`);
+    expect(css.headers.get("content-type")).toContain("text/css");
+    expect(await css.text()).toContain(".card");
+    const js = await fetch(`${s.url}/app.js`);
+    expect(js.headers.get("content-type")).toContain("text/javascript");
+    const script = await js.text();
+    expect(script).toContain("/events");
+    expect(script).toContain("/api/config");
+  });
+
+  it("does not serve other files from the page folder's neighbours", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    expect((await fetch(`${s.url}/../server.ts`)).status).toBe(404);
+    expect((await fetch(`${s.url}/page.ts`)).status).toBe(404);
   });
 
   it("serves the loaded config as json", async () => {
@@ -49,9 +72,9 @@ describe("server", () => {
     s.push(finding);
     const body = await (await fetch(`${s.url}/api/findings`)).json();
     expect(body.findings[0].diff).toContain("+import requests");
-    const html = await (await fetch(`${s.url}/`)).text();
-    expect(html).toContain('class="diff"');
-    expect(html).toContain('class="fold"');
+    const script = await (await fetch(`${s.url}/app.js`)).text();
+    expect(script).toContain('class="diff"');
+    expect(script).toContain('class="fold"');
   });
 
   it("lists findings as json, newest first", async () => {
@@ -100,11 +123,11 @@ describe("server", () => {
   it("has add, edit and delete controls in the rules tab", async () => {
     const s = await startServer(0, cfg);
     stop = s.close;
-    const html = await (await fetch(`${s.url}/`)).text();
-    expect(html).toContain('id="add-rule"');
-    expect(html).toContain('data-act="edit"');
-    expect(html).toContain('data-act="delete"');
-    expect(html).toContain("/api/rules");
+    const script = await (await fetch(`${s.url}/app.js`)).text();
+    expect(script).toContain('id="add-rule"');
+    expect(script).toContain('data-act="edit"');
+    expect(script).toContain('data-act="delete"');
+    expect(script).toContain("/api/rules");
   });
 
   it("PUT /api/rules validates, updates the live config and calls onSave", async () => {
