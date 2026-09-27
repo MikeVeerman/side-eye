@@ -18,12 +18,6 @@
   ],
   "sure": 0.8,
   "maybe": 0.5,
-  "blastRadius": [
-    "local",
-    "module",
-    "service",
-    "system-wide"
-  ],
   "rules": [
     {
       "key": "comments",

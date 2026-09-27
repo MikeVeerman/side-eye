@@ -42,7 +42,6 @@ function card(f, fresh) {
   return html`<article class="card${fresh ? " new" : ""}">
     <div class="head">
       <span class="path">${f.path}</span><span class="lines">lines ${f.lines}</span><span class="time">${when(f.at)}</span>
-      <span class="radius ${f.radius}">${f.radius}</span>
       <button class="fold" type="button" aria-expanded="false">
         <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 4l4 4 4-4"/></svg><span>diff</span>
       </button>
@@ -123,7 +122,6 @@ function drawRules() {
     <dl class="meta">
       <dt>sure</dt><dd>${pct(c.sure)} and up prints loud</dd>
       <dt>maybe</dt><dd>${pct(c.maybe)} to ${pct(c.sure)} prints dim</dd>
-      <dt>blast radius</dt><dd>${chips(c.blastRadius)}</dd>
       <dt>sent</dt><dd>${chips(c.extensions)}<br><small>only these extensions ever leave the machine</small></dd>
     </dl>
     <h2>add a rule</h2>

@@ -4,7 +4,7 @@ import { startServer } from "../src/server.js";
 import type { Finding } from "../src/types.js";
 
 const finding: Finding = {
-  path: "src/a.py", lines: "8-23", radius: "module", at: 1700000000000,
+  path: "src/a.py", lines: "8-23", at: 1700000000000,
   diff: "@@ -1,2 +8,16 @@\n-old()\n+import requests\n+requests.get(url)",
   rows: [{ n: 1, mark: "!!", key: "network", label: "Network call is made", p: 0.91 }],
 };
