@@ -3,7 +3,7 @@
 Giving agent quirks the side-eye.
 
 side-eye watches your uncommitted source changes and flags habits of AI-written code as you
-save. The default rules catch five of them:
+save. The example rules catch five of them:
 
 - comments that say what the code does instead of why
 - fallbacks and guards that hide missing data instead of failing loudly
@@ -11,12 +11,12 @@ save. The default rules catch five of them:
 - type system bypasses: `any`, unknown casts, type-ignore comments
 - vague names: `data`, `result`, `tmp`, `obj`, single letters
 
-Each flag comes with a calibrated confidence, not a verdict. It buys attention, not judgment.
-Rules are plain yes/no questions in a file, so add your own: network calls, secrets, schema
-changes, whatever your team side-eyes.
+The system uses Jev for instant and dirt-cheap checks as your agent builds.
 
-Only source code files are ever sent (`.py`, `.ts`, `.java`, ...). Config, env, data and lock
-files never leave the machine. That list lives in `.side-eye` and is the whole rule.
+Let you agent watch the command line feedback or keep an eye on them in the web UI.
+
+Only source code files tracked by git are ever sent to Jev. Config, env, secrets, PII data and lock
+files never leave the machine. That list lives in `.side-eye`.
 
 ## Setup
 
@@ -53,8 +53,7 @@ Committed in the target repo so the team shares one set of rules.
 ```
 
 Each rule is one yes/no question Jev answers per diff hunk. `label` is what you see, `question`
-is what Jev is asked. Keep them saying the same thing, and keep the question to one sentence:
-explanation around it dilutes the answer. Flags at or above `sure` print loud, between `maybe`
+is what Jev is asked. Flags at or above `sure` print loud, between `maybe`
 and `sure` print dim, the rest stay silent.
 
 Edit rules in the Rules tab of the page, or in the file by hand. Either way a running
