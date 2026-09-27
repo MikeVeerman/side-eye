@@ -1,15 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig } from "../src/config.js";
 import { startServer } from "../src/server.js";
+import { scopesOf } from "./helpers.js";
 import type { Finding } from "../src/types.js";
 
 const finding: Finding = {
   path: "src/a.py", lines: "8-23", at: 1700000000000,
   diff: "@@ -1,2 +8,16 @@\n-old()\n+import requests\n+requests.get(url)",
-  rows: [{ n: 1, mark: "!!", key: "network", label: "Network call is made", p: 0.91 }],
+  rows: [{ n: 1, mark: "!!", key: "network", label: "Network call is made", p: 0.91, from: "" }],
 };
 
-const cfg = { ...defaultConfig(), sure: 0.85 };
+const cfg = scopesOf({ ...defaultConfig(), sure: 0.85 });
 let stop: (() => Promise<void>) | undefined;
 afterEach(async () => { await stop?.(); stop = undefined; });
 
@@ -63,7 +64,8 @@ describe("server", () => {
     const body = await r.json();
     expect(body.sure).toBe(0.85);
     expect(body.rules).toHaveLength(5);
-    expect(body.rules[0]).toEqual(cfg.rules[0]);
+    expect(body.rules[0]).toEqual(cfg.root.rules[0]);
+    expect(body.scopes).toEqual([]);
   });
 
   it("includes the diff in the findings json and has a diff panel in the page", async () => {
@@ -124,44 +126,83 @@ describe("server", () => {
     const s = await startServer(0, cfg);
     stop = s.close;
     const script = await (await fetch(`${s.url}/app.js`)).text();
-    expect(script).toContain('id="add-rule"');
+    expect(script).toContain('data-act="new"');
     expect(script).toContain('data-act="edit"');
     expect(script).toContain('data-act="delete"');
     expect(script).toContain("/api/rules");
   });
 
   it("PUT /api/rules validates, updates the live config and calls onSave", async () => {
-    const live = { ...defaultConfig() };
-    const saved: unknown[] = [];
-    const s = await startServer(0, live, (c) => saved.push(structuredClone(c)));
+    const live = scopesOf({ ...defaultConfig() });
+    const saved: string[] = [];
+    const s = await startServer(0, live, (dir) => saved.push(dir));
     stop = s.close;
     const rules = [{ key: "network", label: "Net", question: "Net?" }, { key: "new_one", label: "New", question: "New?" }];
-    const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ rules }), headers: { "content-type": "application/json" } });
+    const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ dir: "", rules }), headers: { "content-type": "application/json" } });
     expect(r.status).toBe(200);
     expect((await r.json()).rules).toEqual(rules);
-    expect(live.rules).toEqual(rules);
-    expect(live.sure).toBe(0.8);
-    expect(saved).toHaveLength(1);
-    expect((saved[0] as { rules: unknown }).rules).toEqual(rules);
+    expect(live.root.rules).toEqual(rules);
+    expect(live.root.sure).toBe(0.8);
+    expect(saved).toEqual([""]);
   });
 
   it("PUT /api/rules rejects bad rules with a message and changes nothing", async () => {
-    const live = { ...defaultConfig() };
-    const saved: unknown[] = [];
-    const s = await startServer(0, live, (c) => saved.push(c));
+    const live = scopesOf({ ...defaultConfig() });
+    const saved: string[] = [];
+    const s = await startServer(0, live, (dir) => saved.push(dir));
     stop = s.close;
-    const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ rules: [{ key: "a b", label: "A", question: "A?" }] }) });
+    const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ dir: "", rules: [{ key: "a b", label: "A", question: "A?" }] }) });
     expect(r.status).toBe(400);
     expect((await r.json()).error).toMatch(/letters, digits and underscores/);
-    expect(live.rules).toHaveLength(5);
+    expect(live.root.rules).toHaveLength(5);
     expect(saved).toEqual([]);
   });
 
   it("PUT /api/rules rejects malformed json", async () => {
-    const s = await startServer(0, { ...defaultConfig() });
+    const s = await startServer(0, scopesOf({ ...defaultConfig() }));
     stop = s.close;
     const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: "{nope" });
     expect(r.status).toBe(400);
+  });
+
+  it("PUT /api/rules with a folder creates or updates that nested scope, empty allowed", async () => {
+    const live = scopesOf({ ...defaultConfig() });
+    const saved: string[] = [];
+    const s = await startServer(0, live, (dir) => saved.push(dir));
+    stop = s.close;
+    const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ dir: "frontend", rules: [] }) });
+    expect(r.status).toBe(200);
+    expect((await r.json()).scopes).toEqual([{ dir: "frontend", rules: [] }]);
+    expect(live.nested.get("frontend")).toEqual([]);
+    expect(saved).toEqual(["frontend"]);
+    const css = [{ key: "css", label: "C", question: "C?" }];
+    await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ dir: "frontend/", rules: css }) });
+    expect(live.nested.get("frontend")).toEqual(css);
+  });
+
+  it("PUT /api/rules refuses a folder outside the repo", async () => {
+    const s = await startServer(0, scopesOf({ ...defaultConfig() }));
+    stop = s.close;
+    const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ dir: "../other", rules: [] }) });
+    expect(r.status).toBe(400);
+    expect((await r.json()).error).toMatch(/inside the repo/);
+  });
+
+  it("GET /api/rules-for shows the merged rules for a path", async () => {
+    const live = scopesOf({ ...defaultConfig() }, { frontend: [{ key: "css", label: "C", question: "C?" }] });
+    const s = await startServer(0, live);
+    stop = s.close;
+    const body = await (await fetch(`${s.url}/api/rules-for?path=frontend/a.ts`)).json();
+    expect(body.rules.map((r: { key: string; from: string }) => [r.key, r.from])).toContainEqual(["css", "frontend"]);
+    expect(body.rules).toHaveLength(6);
+  });
+
+  it("has a per-folder section and a preview box in the rules tab", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    const js = await (await fetch(`${s.url}/app.js`)).text();
+    expect(js).toContain("/api/rules-for");
+    expect(js).toContain("add-scope");
   });
 
   it("404s anything else", async () => {

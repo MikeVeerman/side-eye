@@ -1,9 +1,9 @@
 // A small local server so the flags also show up in a browser. Node's http module, nothing else.
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { validateRules } from "./config.js";
+import { normalizeDir, rulesFor, validateRules } from "./config.js";
 import { serveUiFile } from "./ui.js";
-import type { Config, Finding } from "./types.js";
+import type { Finding, Scopes } from "./types.js";
 
 export interface SideEyeServer {
   url: string;
@@ -25,8 +25,14 @@ function json(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
-/** cfg is shared with the watcher and updated in place, so a saved rule applies to the next check. */
-export function startServer(port: number, cfg: Config, onSave?: (cfg: Config) => void): Promise<SideEyeServer> {
+/** What the page sees: the root config plus every nested scope. */
+function view(scopes: Scopes) {
+  return { ...scopes.root, scopes: [...scopes.nested].sort().map(([dir, rules]) => ({ dir, rules })) };
+}
+
+/** scopes is shared with the watcher and updated in place, so a saved rule applies to the next check.
+ *  onSave gets the folder whose file must be written: "" for the root. */
+export function startServer(port: number, scopes: Scopes, onSave?: (dir: string) => void): Promise<SideEyeServer> {
   let findings: Finding[] = [];
   const clients = new Set<ServerResponse>();
 
@@ -42,15 +48,19 @@ export function startServer(port: number, cfg: Config, onSave?: (cfg: Config) =>
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ findings }));
     } else if (url.pathname === "/api/config") {
-      json(res, 200, cfg);
+      json(res, 200, view(scopes));
+    } else if (url.pathname === "/api/rules-for") {
+      json(res, 200, { rules: rulesFor(url.searchParams.get("path") ?? "", scopes) });
     } else if (url.pathname === "/api/rules" && req.method === "PUT") {
       readBody(req).then((body) => {
         try {
-          const rules = JSON.parse(body).rules;
-          validateRules(rules);
-          cfg.rules = rules;
-          onSave?.(cfg);
-          json(res, 200, cfg);
+          const { dir: rawDir, rules } = JSON.parse(body) as { dir?: string; rules: unknown };
+          const dir = normalizeDir(rawDir ?? "");
+          validateRules(rules, dir !== "");
+          if (dir === "") scopes.root.rules = rules;
+          else scopes.nested.set(dir, rules);
+          onSave?.(dir);
+          json(res, 200, view(scopes));
         } catch (e) {
           json(res, 400, { error: (e as Error).message });
         }

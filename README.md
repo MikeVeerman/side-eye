@@ -60,6 +60,25 @@ and `sure` print dim, the rest stay silent.
 Edit rules in the Rules tab of the page, or in the file by hand. Either way a running
 `side-eye watch` notices the change, reloads the rules and re-checks every changed file.
 
+## Rules for one folder
+
+Put a second `.side-eye` inside a folder and its rules apply only to files under that folder,
+on top of the root rules. It holds just a `rules` list:
+
+```json
+{
+  "rules": [
+    { "key": "inline_style", "label": "Inline styles used",
+      "question": "Does this code change add inline style attributes instead of using a stylesheet or class?" }
+  ]
+}
+```
+
+Rules merge by key and the nearest file wins, so reusing a root key inside `frontend/.side-eye`
+replaces that rule for front-end files only. Thresholds and the extension whitelist stay in the
+root file. Create one with `side-eye init frontend`, or from the Rules tab, which also shows which
+rules apply to any given path. A flag from a nested rule says so, both in the terminal and on the page.
+
 ## Development
 
 ```

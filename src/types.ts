@@ -11,6 +11,17 @@ export interface Config {
   rules: Rule[];
 }
 
+/** A rule together with the folder whose .side-eye defined it. "" is the repo root. */
+export interface ScopedRule extends Rule {
+  from: string;
+}
+
+/** The root .side-eye plus every nested one, keyed by folder. Shared by watcher and server, updated in place. */
+export interface Scopes {
+  root: Config;
+  nested: Map<string, Rule[]>;
+}
+
 export interface Hunk {
   path: string;
   text: string;
@@ -28,6 +39,7 @@ export interface Row {
   key: string;
   label: string;
   p: number;
+  from: string; // folder of the .side-eye that defined the rule, "" for root
 }
 
 export interface Finding {

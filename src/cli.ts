@@ -4,14 +4,14 @@
 import { parseArgs } from "node:util";
 import { checkRepo } from "./checker.js";
 import { JevClient } from "./client.js";
-import { initConfig, loadConfig, saveConfig } from "./config.js";
+import { initConfig, loadScopes, saveConfig, saveNested } from "./config.js";
 import { loadDotenv } from "./dotenv.js";
 import { render } from "./report.js";
 import { startServer } from "./server.js";
 import { watch } from "./watch.js";
 
 const USAGE = `usage:
-  side-eye init                     write a default .side-eye file here
+  side-eye init [folder]            write a default .side-eye here, or an empty nested one in a folder
   side-eye check [paths...]         flag uncommitted source changes (or just these files)
   side-eye watch [--port 4242] [--interval 1000] [--no-server]
                                     re-check source files as you save them, with a local page`;
@@ -25,7 +25,7 @@ async function main(argv: string[]): Promise<number> {
   const repo = process.cwd();
 
   if (cmd === "init") {
-    console.log(`wrote ${initConfig(repo)}`);
+    console.log(`wrote ${initConfig(repo, paths[0] ?? "")}`);
     return 0;
   }
   if (cmd !== "check" && cmd !== "watch") {
@@ -34,25 +34,26 @@ async function main(argv: string[]): Promise<number> {
   }
 
   loadDotenv(repo);
-  const cfg = loadConfig(repo);
+  const scopes = loadScopes(repo);
   const client = new JevClient({});
 
   if (cmd === "check") {
-    const { findings, skipped } = await checkRepo(repo, client, cfg, paths.length ? paths : undefined);
+    const { findings, skipped } = await checkRepo(repo, client, scopes, paths.length ? paths : undefined);
     for (const p of skipped) console.log(`skipped ${p} (not a source file, never sent)`);
     for (const f of findings) console.log(render(f));
     return 0;
   }
 
-  const server = values["no-server"] ? null : await startServer(Number(values.port), cfg, (c) => saveConfig(repo, c));
+  const save = (dir: string) => (dir === "" ? saveConfig(repo, scopes.root) : saveNested(repo, dir, scopes.nested.get(dir) ?? []));
+  const server = values["no-server"] ? null : await startServer(Number(values.port), scopes, save);
   console.log(`side-eye watching ${repo} (source files only, ctrl-c to stop)`);
   if (server) console.log(`page: ${server.url}`);
-  await watch(repo, client, cfg, {
+  await watch(repo, client, scopes, {
     interval: Number(values.interval),
     onStart: (path) => server?.clean(path),
     onFinding: (f) => { console.log(render(f)); server?.push(f); },
     onClean: (path) => console.log(`ok  ${path}`),
-    onConfig: (c) => console.log(`.side-eye changed: ${c.rules.length} rules, re-checking every changed file`),
+    onConfig: (s) => console.log(`.side-eye changed: ${s.root.rules.length} root rules, ${s.nested.size} nested file(s), re-checking every changed file`),
     onConfigError: (e) => console.error(`.side-eye changed but could not be loaded, keeping old rules: ${e.message}`),
   });
   return 0;
