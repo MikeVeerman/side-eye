@@ -11,7 +11,7 @@ save. The example rules catch five of them:
 - type system bypasses: `any`, unknown casts, type-ignore comments
 - vague names: `data`, `result`, `tmp`, `obj`, single letters
 
-The system uses Jev for instant and dirt-cheap checks as your agent builds.
+The system uses [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev) for instant and dirt-cheap checks as your agent builds. It requires a TYPESAFE_API_KEY.
 
 Let you agent watch the command line feedback or keep an eye on them in the web UI.
 
