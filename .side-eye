@@ -44,6 +44,11 @@
       "key": "type_escape",
       "label": "Type system bypassed",
       "question": "Does this code change bypass the type system with any, unknown casts, type-ignore comments or untyped objects where a real type was possible?"
+    },
+    {
+      "key": "naming",
+      "label": "Vague names",
+      "question": "Does this code change introduce variable or function names that are generic, like data, result, tmp, obj, val or single letters, instead of saying what they hold?"
     }
   ]
 }
