@@ -36,6 +36,7 @@ nav.tabs button { background: none; border: 0; border-bottom: 2px solid transpar
 nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--sure); }
 nav.tabs button:focus-visible { outline: 2px solid var(--maybe); outline-offset: 2px; border-radius: 4px; }
 .panel[hidden] { display: none; }
+#rules h2 { font-size: 15px; margin: 0 0 10px; }
 .meta { display: grid; grid-template-columns: 12ch 1fr; gap: 6px 12px; margin-bottom: 20px; font-size: 14px; }
 .meta dt { color: var(--dim); }
 .meta dd { margin: 0; }
