@@ -1,4 +1,4 @@
-// The local page: three plain files (html, css, js) next to this module, served as-is. No build step, no external assets.
+// The browser UI: three plain files (html, css, js) in the ui/ folder next to this module, served as-is. No build step, no external assets.
 
 import { readFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
@@ -9,11 +9,11 @@ const FILES: Record<string, { name: string; type: string }> = {
   "/app.js": { name: "app.js", type: "text/javascript; charset=utf-8" },
 };
 
-/** Serves one of the page's files. Returns false when the path is not part of the page. */
-export function servePage(pathname: string, res: ServerResponse): boolean {
+/** Serves one of the UI's files. Returns false when the path is not part of the UI. */
+export function serveUiFile(pathname: string, res: ServerResponse): boolean {
   const file = FILES[pathname];
   if (!file) return false;
   res.writeHead(200, { "content-type": file.type });
-  res.end(readFileSync(new URL(`./page/${file.name}`, import.meta.url)));
+  res.end(readFileSync(new URL(`./ui/${file.name}`, import.meta.url)));
   return true;
 }

@@ -48,11 +48,11 @@ describe("server", () => {
     expect(script).toContain("/api/config");
   });
 
-  it("does not serve other files from the page folder's neighbours", async () => {
+  it("does not serve files outside the ui folder", async () => {
     const s = await startServer(0, cfg);
     stop = s.close;
     expect((await fetch(`${s.url}/../server.ts`)).status).toBe(404);
-    expect((await fetch(`${s.url}/page.ts`)).status).toBe(404);
+    expect((await fetch(`${s.url}/ui.ts`)).status).toBe(404);
   });
 
   it("serves the loaded config as json", async () => {
@@ -62,7 +62,7 @@ describe("server", () => {
     expect(r.headers.get("content-type")).toContain("application/json");
     const body = await r.json();
     expect(body.sure).toBe(0.85);
-    expect(body.rules).toHaveLength(10);
+    expect(body.rules).toHaveLength(4);
     expect(body.rules[0]).toEqual(cfg.rules[0]);
   });
 
@@ -153,7 +153,7 @@ describe("server", () => {
     const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ rules: [{ key: "a b", label: "A", question: "A?" }] }) });
     expect(r.status).toBe(400);
     expect((await r.json()).error).toMatch(/letters, digits and underscores/);
-    expect(live.rules).toHaveLength(10);
+    expect(live.rules).toHaveLength(4);
     expect(saved).toEqual([]);
   });
 
