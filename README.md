@@ -21,7 +21,7 @@ files never leave the machine. That list lives in `.side-eye` and is the whole r
 ## Setup
 
 ```
-npm install -g side-eye          # or: npx side-eye
+npm install -g side-eye-cli      # or: npx side-eye-cli
 cd your-repo
 side-eye init                    # writes .side-eye, commit it
 echo "TYPESAFE_API_KEY=..." > .env
