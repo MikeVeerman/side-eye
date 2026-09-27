@@ -57,7 +57,7 @@ describe("config", () => {
 
   it("defaults are the three AI coding habits, one sentence each", () => {
     const c = defaultConfig();
-    expect(c.rules.map((r) => r.key)).toEqual(["comments", "fallback", "leftovers", "type_escape"]);
+    expect(c.rules.map((r) => r.key)).toEqual(["comments", "fallback", "leftovers", "type_escape", "naming"]);
     for (const r of c.rules) {
       expect(r.question.endsWith("?")).toBe(true);
       expect(r.question.split("?")).toHaveLength(2); // exactly one question, no preamble

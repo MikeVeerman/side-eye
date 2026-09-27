@@ -62,7 +62,7 @@ describe("server", () => {
     expect(r.headers.get("content-type")).toContain("application/json");
     const body = await r.json();
     expect(body.sure).toBe(0.85);
-    expect(body.rules).toHaveLength(4);
+    expect(body.rules).toHaveLength(5);
     expect(body.rules[0]).toEqual(cfg.rules[0]);
   });
 
@@ -153,7 +153,7 @@ describe("server", () => {
     const r = await fetch(`${s.url}/api/rules`, { method: "PUT", body: JSON.stringify({ rules: [{ key: "a b", label: "A", question: "A?" }] }) });
     expect(r.status).toBe(400);
     expect((await r.json()).error).toMatch(/letters, digits and underscores/);
-    expect(live.rules).toHaveLength(4);
+    expect(live.rules).toHaveLength(5);
     expect(saved).toEqual([]);
   });
 

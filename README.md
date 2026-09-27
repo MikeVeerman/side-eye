@@ -3,12 +3,13 @@
 Gives your side effects the side-eye.
 
 side-eye watches your uncommitted source changes and flags habits of AI-written code as you
-save. The default rules catch four of them:
+save. The default rules catch five of them:
 
 - comments that say what the code does instead of why
 - fallbacks and guards that hide missing data instead of failing loudly
 - debug leftovers: stray prints, commented-out code, stale TODOs, unused imports
 - type system bypasses: `any`, unknown casts, type-ignore comments
+- vague names: `data`, `result`, `tmp`, `obj`, single letters
 
 Each flag comes with a calibrated confidence, not a verdict. It buys attention, not judgment.
 Rules are plain yes/no questions in a file, so add your own: network calls, secrets, schema
