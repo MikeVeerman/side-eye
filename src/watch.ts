@@ -4,9 +4,9 @@
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { checkFile } from "./checker.js";
-import { CONFIG_FILE, loadConfig } from "./config.js";
+import { CONFIG_FILE, discoverConfigs, loadScopes } from "./config.js";
 import { changedFiles } from "./hunks.js";
-import type { Client, Config, Finding } from "./types.js";
+import type { Client, Finding, Scopes } from "./types.js";
 import { isSource } from "./whitelist.js";
 
 export interface WatchOptions {
@@ -18,24 +18,31 @@ export interface WatchOptions {
   onStart?: (path: string) => void;        // a file is about to be re-checked
   onFinding?: (f: Finding) => void;
   onClean?: (path: string) => void;
-  onConfig?: (cfg: Config) => void;       // .side-eye changed on disk and was reloaded
-  onConfigError?: (e: Error) => void;     // .side-eye changed but could not be loaded; old rules stay
+  onConfig?: (scopes: Scopes) => void;    // a .side-eye changed on disk and everything was reloaded
+  onConfigError?: (e: Error) => void;     // a .side-eye changed but could not be loaded; old rules stay
 }
 
+/** One number that changes when any .side-eye appears, disappears or is edited. */
 function configMtime(repo: string): number {
-  const p = join(repo, CONFIG_FILE);
-  return existsSync(p) ? statSync(p).mtimeMs : 0;
+  let sum = 0;
+  for (const dir of discoverConfigs(repo)) {
+    const p = join(repo, dir, CONFIG_FILE);
+    if (existsSync(p)) sum += statSync(p).mtimeMs + dir.length;
+  }
+  return sum;
 }
 
-/** Reloads cfg in place when .side-eye changed. Returns true when the rules changed. */
-function reloadIfChanged(repo: string, cfg: Config, last: { value: number }, o: WatchOptions): boolean {
+/** Reloads the scopes in place when any .side-eye changed. Returns true when the rules changed. */
+function reloadIfChanged(repo: string, scopes: Scopes, last: { value: number }, o: WatchOptions): boolean {
   const mtime = configMtime(repo);
   if (last.value < 0) { last.value = mtime; return false; }
   if (mtime === last.value) return false;
   last.value = mtime;
   try {
-    Object.assign(cfg, loadConfig(repo));
-    o.onConfig?.(cfg);
+    const fresh = loadScopes(repo);
+    Object.assign(scopes.root, fresh.root);
+    scopes.nested = fresh.nested;
+    o.onConfig?.(scopes);
     return true;
   } catch (e) {
     o.onConfigError?.(e as Error);
@@ -43,20 +50,20 @@ function reloadIfChanged(repo: string, cfg: Config, last: { value: number }, o: 
   }
 }
 
-export async function watch(repo: string, client: Client, cfg: Config, o: WatchOptions = {}): Promise<void> {
+export async function watch(repo: string, client: Client, scopes: Scopes, o: WatchOptions = {}): Promise<void> {
   const interval = o.interval ?? 1000;
   const sleep = o.sleep ?? ((ms) => new Promise<void>((r) => setTimeout(r, ms)));
   const seen = o.seen ?? new Map<string, number>();
   const last = o.configMtime ?? { value: -1 };
   for (let done = 0; o.rounds === undefined || done < o.rounds; done++) {
-    if (reloadIfChanged(repo, cfg, last, o)) seen.clear();   // new rules: every changed file gets asked again
+    if (reloadIfChanged(repo, scopes, last, o)) seen.clear();   // new rules: every changed file gets asked again
     for (const path of changedFiles(repo)) {
-      if (!isSource(path, cfg.extensions)) continue;
+      if (!isSource(path, scopes.root.extensions)) continue;
       const mtime = statSync(join(repo, path)).mtimeMs;
       if (seen.get(path) === mtime) continue;
       seen.set(path, mtime);
       o.onStart?.(path);
-      const found = await checkFile(repo, client, cfg, path);
+      const found = await checkFile(repo, client, scopes, path);
       if (found.length) found.forEach((f) => o.onFinding?.(f));
       else o.onClean?.(path);
     }

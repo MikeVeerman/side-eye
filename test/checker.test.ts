@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkFile, checkRepo } from "../src/checker.js";
 import { defaultConfig } from "../src/config.js";
-import { FakeClient, RULES, makeRepo } from "./helpers.js";
+import { FakeClient, RULES, makeRepo, scopesOf } from "./helpers.js";
 
-const cfg = { ...defaultConfig(), rules: RULES };
+const cfg = scopesOf({ ...defaultConfig(), rules: RULES });
 
 describe("checkFile", () => {
   it("sends each hunk and returns findings", async () => {
@@ -23,6 +23,19 @@ describe("checkFile", () => {
     const repo = makeRepo();
     writeFileSync(join(repo, "a.py"), "y = 2\n");
     expect(await checkFile(repo, new FakeClient({ network: 0.1 }), cfg, "a.py")).toEqual([]);
+  });
+});
+
+describe("checkFile in a nested folder", () => {
+  it("asks the merged rules and marks where each came from", async () => {
+    const repo = makeRepo();
+    mkdirSync(join(repo, "frontend"));
+    writeFileSync(join(repo, "frontend", "a.ts"), "fetch(x)\n");
+    const scopes = scopesOf({ ...defaultConfig(), rules: RULES }, { frontend: [{ key: "css", label: "Inline css", question: "Css?" }] });
+    const fake = new FakeClient({ network: 0.9, css: 0.95 });
+    const found = await checkFile(repo, fake, scopes, "frontend/a.ts");
+    expect(fake.asked).toEqual([["network", "secrets", "auth", "css"]]);
+    expect(found[0].rows.map((r) => [r.key, r.from])).toEqual([["css", "frontend"], ["network", ""]]);
   });
 });
 

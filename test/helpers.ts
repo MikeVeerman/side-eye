@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Answer, Rule } from "../src/types.js";
+import type { Answer, Config, Rule, Scopes } from "../src/types.js";
 
 export function git(repo: string, ...args: string[]): string {
   return execFileSync("git", args, { cwd: repo, encoding: "utf8" });
@@ -33,11 +33,19 @@ export const RULES: Rule[] = [
   { key: "auth", label: "Auth or permissions change", question: "Does this touch auth?" },
 ];
 
+export function scopesOf(root: Config, nested: Record<string, Rule[]> = {}): Scopes {
+  return { root, nested: new Map(Object.entries(nested)) };
+}
+
 export class FakeClient {
   states: string[] = [];
+  asked: string[][] = [];   // rule keys sent with each request
   constructor(private flags: Record<string, number> = { network: 0.9, secrets: 0.1, auth: 0.1 }) {}
-  async ask(state: string): Promise<Answer> {
+  async ask(state: string, rules: Rule[]): Promise<Answer> {
     this.states.push(state);
-    return { flags: { ...this.flags }, inputTokens: 5 };
+    this.asked.push(rules.map((r) => r.key));
+    const flags: Record<string, number> = {};
+    for (const r of rules) flags[r.key] = this.flags[r.key] ?? 0.1;
+    return { flags, inputTokens: 5 };
   }
 }

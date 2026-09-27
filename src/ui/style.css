@@ -41,6 +41,13 @@ nav.tabs button:focus-visible { outline: 2px solid var(--maybe); outline-offset:
 .meta dt { color: var(--dim); }
 .meta dd { margin: 0; }
 .chip { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; margin: 2px 4px 2px 0; font-size: 12px; color: var(--dim); }
+.scope { margin-top: 28px; }
+.scope h2 { font-size: 15px; margin: 0 0 4px; }
+.scope h2 .count { color: var(--dim); font-weight: 400; font-size: 13px; margin-left: 8px; }
+.scope > .btn { margin: 8px 0 4px; }
+form.inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+form.inline input { flex: 1; min-width: 200px; font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.row .from { color: var(--dim); font-size: 11px; margin-left: 8px; }
 .rule { border-top: 1px solid var(--line); padding: 12px 0; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
 .rule .label { font-weight: 600; }
 .rule .key { color: var(--dim); font-size: 12px; margin-left: 10px; }
