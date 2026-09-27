@@ -1,6 +1,6 @@
 # side-eye
 
-Gives your side effects the side-eye.
+Giving agent quirks the side-eye.
 
 side-eye watches your uncommitted source changes and flags habits of AI-written code as you
 save. The default rules catch five of them:

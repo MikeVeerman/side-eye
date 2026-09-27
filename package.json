@@ -1,7 +1,7 @@
 {
   "name": "side-eye",
   "version": "0.1.0",
-  "description": "Gives your side effects the side-eye. Flags externalities in uncommitted source changes, on your own machine, with calibrated confidence.",
+  "description": "Giving agent quirks the side-eye. Flags habits of AI-written code in uncommitted changes, on your own machine, with calibrated confidence.",
   "type": "module",
   "bin": {
     "side-eye": "./dist/cli.js"
