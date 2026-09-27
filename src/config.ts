@@ -1,4 +1,6 @@
 // The rules live in the target repo, in a .side-eye file, so a team can commit and tune them.
+// The defaults target habits of AI-written code. Keep each question to one sentence: explanation
+// around it dilutes the answer.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,26 +16,14 @@ export function defaultConfig(): Config {
     maybe: 0.5,
     blastRadius: ["local", "module", "service", "system-wide"],
     rules: [
-      { key: "network", label: "Network call is made",
-        question: "Does this code change make a network call or add a new outbound host?" },
-      { key: "secrets", label: "Secret or credential is read",
-        question: "Does this code change read environment variables, secrets, credentials or API keys?" },
-      { key: "auth", label: "Auth or permissions change",
-        question: "Does this code change touch authentication, sessions or permission checks?" },
-      { key: "schema", label: "Database schema changes",
-        question: "Does this code change alter a database schema, table or migration?" },
-      { key: "filesystem", label: "Files written outside project",
-        question: "Does this code change write files outside the project directory?" },
-      { key: "dependency", label: "Dependency added or changed",
-        question: "Does this code change add, remove or upgrade a third-party dependency?" },
-      { key: "swallow", label: "Exception is swallowed",
-        question: "Does this code change catch an exception and silently ignore it?" },
-      { key: "public_api", label: "Public API changes",
-        question: "Does this code change alter a public function signature, route or API contract?" },
-      { key: "logging", label: "User data may be logged",
-        question: "Does this code change log or print a value that could be user data?" },
-      { key: "background", label: "Background task started",
-        question: "Does this code change start a background job, thread, timer or scheduled task?" },
+      { key: "comments", label: "Comment restates the code",
+        question: "Does this code change add a comment that describes what the code obviously does instead of why?" },
+      { key: "fallback", label: "Fallback hides missing data",
+        question: "Does this code change add a default, guard or fallback for a parameter, response or value that should always be present, instead of failing loudly?" },
+      { key: "leftovers", label: "Debug leftovers",
+        question: "Does this code change leave debug prints, commented-out code, stale TODO notes or unused imports behind?" },
+      { key: "type_escape", label: "Type system bypassed",
+        question: "Does this code change bypass the type system with any, unknown casts, type-ignore comments or untyped objects where a real type was possible?" },
     ],
   };
 }

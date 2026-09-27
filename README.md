@@ -2,9 +2,17 @@
 
 Gives your side effects the side-eye.
 
-side-eye watches your uncommitted source changes and flags externalities as you save: network
-calls, secrets being read, auth changes, schema changes, swallowed exceptions, background tasks
-and so on. Each flag comes with a calibrated confidence, not a verdict. It buys attention, not judgment.
+side-eye watches your uncommitted source changes and flags habits of AI-written code as you
+save. The default rules catch four of them:
+
+- comments that say what the code does instead of why
+- fallbacks and guards that hide missing data instead of failing loudly
+- debug leftovers: stray prints, commented-out code, stale TODOs, unused imports
+- type system bypasses: `any`, unknown casts, type-ignore comments
+
+Each flag comes with a calibrated confidence, not a verdict. It buys attention, not judgment.
+Rules are plain yes/no questions in a file, so add your own: network calls, secrets, schema
+changes, whatever your team side-eyes.
 
 Only source code files are ever sent (`.py`, `.ts`, `.java`, ...). Config, env, data and lock
 files never leave the machine. That list lives in `.side-eye` and is the whole rule.
@@ -38,8 +46,8 @@ Committed in the target repo so the team shares one set of rules.
   "maybe": 0.5,
   "blastRadius": ["local", "module", "service", "system-wide"],
   "rules": [
-    { "key": "network", "label": "Network call is made",
-      "question": "Does this code change make a network call or add a new outbound host?" }
+    { "key": "leftovers", "label": "Debug leftovers",
+      "question": "Does this code change leave debug prints, commented-out code, stale TODO notes or unused imports behind?" }
   ]
 }
 ```
