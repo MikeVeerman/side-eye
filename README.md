@@ -45,7 +45,6 @@ Committed in the target repo so the team shares one set of rules.
   "extensions": [".py", ".ts", "..."],
   "sure": 0.8,
   "maybe": 0.5,
-  "blastRadius": ["local", "module", "service", "system-wide"],
   "rules": [
     { "key": "leftovers", "label": "Debug leftovers",
       "question": "Does this code change leave debug prints, commented-out code, stale TODO notes or unused imports behind?" }

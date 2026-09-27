@@ -5,10 +5,9 @@ import type { Answer, Client, Rule } from "./types.js";
 export const API_URL = "https://api.typesafe.ai/v1/systemone";
 const RETRY = new Set([429, 500, 502, 503, 504]);
 
-export function requestQuestions(rules: Rule[], blastRadius: string[]): Record<string, unknown> {
+export function requestQuestions(rules: Rule[]): Record<string, unknown> {
   const qs: Record<string, unknown> = {};
   for (const r of rules) qs[r.key] = { type: "noul", instructions: r.question };
-  qs.blast_radius = { type: "score", instructions: "How far could a bug in this code change reach?", criteria: blastRadius };
   return qs;
 }
 
@@ -34,8 +33,8 @@ export class JevClient implements Client {
     this.sleep = o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
   }
 
-  async ask(state: string, rules: Rule[], blastRadius: string[]): Promise<Answer> {
-    const body = JSON.stringify({ state, model: this.model, questions: requestQuestions(rules, blastRadius) });
+  async ask(state: string, rules: Rule[]): Promise<Answer> {
+    const body = JSON.stringify({ state, model: this.model, questions: requestQuestions(rules) });
     let last = "";
     for (let attempt = 0; attempt < 6; attempt++) {
       const r = await this.fetchFn(API_URL, {
@@ -49,20 +48,19 @@ export class JevClient implements Client {
         continue;
       }
       if (!r.ok) throw new Error(`jev request failed: ${r.status} ${(await r.text()).slice(0, 200)}`);
-      return parse(await r.json(), rules, blastRadius);
+      return parse(await r.json(), rules);
     }
     throw new Error(`jev request failed after retries: ${last}`);
   }
 }
 
 interface Raw {
-  answers: Record<string, { noul?: number; probabilities?: Record<string, number> }>;
+  answers: Record<string, { noul?: number }>;
   usage: { input_tokens: number };
 }
 
-function parse(d: Raw, rules: Rule[], blastRadius: string[]): Answer {
+function parse(d: Raw, rules: Rule[]): Answer {
   const flags: Record<string, number> = {};
   for (const r of rules) flags[r.key] = Number(d.answers[r.key].noul);
-  const br = blastRadius.map((_, i) => Number(d.answers.blast_radius.probabilities![String(i)]));
-  return { flags, blastRadius: br, inputTokens: Number(d.usage.input_tokens) };
+  return { flags, inputTokens: Number(d.usage.input_tokens) };
 }

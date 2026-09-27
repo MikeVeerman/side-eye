@@ -38,6 +38,6 @@ export class FakeClient {
   constructor(private flags: Record<string, number> = { network: 0.9, secrets: 0.1, auth: 0.1 }) {}
   async ask(state: string): Promise<Answer> {
     this.states.push(state);
-    return { flags: { ...this.flags }, blastRadius: [1, 0, 0, 0], inputTokens: 5 };
+    return { flags: { ...this.flags }, inputTokens: 5 };
   }
 }

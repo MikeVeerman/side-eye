@@ -8,7 +8,6 @@ export interface Config {
   extensions: string[];
   sure: number;
   maybe: number;
-  blastRadius: string[];
   rules: Rule[];
 }
 
@@ -20,7 +19,6 @@ export interface Hunk {
 
 export interface Answer {
   flags: Record<string, number>; // rule key -> probability of "yes"
-  blastRadius: number[];         // distribution over config.blastRadius
   inputTokens: number;
 }
 
@@ -35,12 +33,11 @@ export interface Row {
 export interface Finding {
   path: string;
   lines: string;
-  radius: string;
   rows: Row[];
   at: number;
   diff: string; // the hunk that was sent, so the page can show what was judged
 }
 
 export interface Client {
-  ask(state: string, rules: Rule[], blastRadius: string[]): Promise<Answer>;
+  ask(state: string, rules: Rule[]): Promise<Answer>;
 }

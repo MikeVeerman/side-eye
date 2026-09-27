@@ -40,7 +40,12 @@ describe("config", () => {
     expect(c.extensions).toEqual(defaultConfig().extensions);
     expect(c.sure).toBe(0.8);
     expect(c.maybe).toBe(0.5);
-    expect(c.blastRadius).toEqual(defaultConfig().blastRadius);
+  });
+
+  it("load drops fields it does not know, such as the old blastRadius", () => {
+    const repo = makeRepo();
+    writeFileSync(join(repo, CONFIG_FILE), JSON.stringify({ blastRadius: ["a"], rules: [{ key: "x", label: "X", question: "X?" }] }));
+    expect(Object.keys(loadConfig(repo)).sort()).toEqual(["extensions", "maybe", "rules", "sure"]);
   });
 
   it("load rejects a file without rules", () => {
@@ -79,9 +84,6 @@ describe("validateRules", () => {
   it("rejects a key that is not a plain identifier", () => {
     expect(() => validateRules([{ key: "has space", label: "A", question: "A?" }])).toThrow(/letters, digits and underscores/);
     expect(() => validateRules([{ key: "Ok_1", label: "A", question: "A?" }])).not.toThrow();
-  });
-  it("rejects the reserved key blast_radius", () => {
-    expect(() => validateRules([{ key: "blast_radius", label: "A", question: "A?" }])).toThrow(/reserved/);
   });
 });
 

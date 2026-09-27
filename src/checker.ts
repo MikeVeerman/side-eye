@@ -8,8 +8,8 @@ import { isSource } from "./whitelist.js";
 export async function checkFile(repo: string, client: Client, cfg: Config, path: string): Promise<Finding[]> {
   const out: Finding[] = [];
   for (const h of splitHunks(hunksFor(repo, path))) {
-    const a = await client.ask(h.text, cfg.rules, cfg.blastRadius);
-    const f = toFinding(h, a, cfg.rules, cfg.blastRadius, cfg.sure, cfg.maybe);
+    const a = await client.ask(h.text, cfg.rules);
+    const f = toFinding(h, a, cfg.rules, cfg.sure, cfg.maybe);
     if (f) out.push(f);
   }
   return out;

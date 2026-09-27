@@ -11,7 +11,7 @@ export function classify(a: Answer, sure: number, maybe: number): { sure: [strin
   };
 }
 
-export function toFinding(h: Hunk, a: Answer, rules: Rule[], blastRadius: string[], sure: number, maybe: number): Finding | null {
+export function toFinding(h: Hunk, a: Answer, rules: Rule[], sure: number, maybe: number): Finding | null {
   const c = classify(a, sure, maybe);
   if (!c.sure.length && !c.maybe.length) return null;
   const labels = Object.fromEntries(rules.map((r) => [r.key, r.label]));
@@ -19,12 +19,11 @@ export function toFinding(h: Hunk, a: Answer, rules: Rule[], blastRadius: string
     ...c.sure.map(([key, p]) => ({ mark: "!!" as const, key, p })),
     ...c.maybe.map(([key, p]) => ({ mark: "maybe" as const, key, p })),
   ].map((r, i) => ({ n: i + 1, mark: r.mark, key: r.key, label: labels[r.key] ?? r.key, p: r.p }));
-  const top = a.blastRadius.indexOf(Math.max(...a.blastRadius));
-  return { path: h.path, lines: lineRange(h.header), radius: blastRadius[top], rows, at: Date.now(), diff: h.text };
+  return { path: h.path, lines: lineRange(h.header), rows, at: Date.now(), diff: h.text };
 }
 
 export function render(f: Finding): string {
-  const lines = [`${f.path}  lines ${f.lines}  [${f.radius}]`];
+  const lines = [`${f.path}  lines ${f.lines}`];
   for (const r of f.rows) {
     const width = 31 - r.mark.length;
     lines.push(`  ${r.n}. ${r.mark} ${r.label.padEnd(width)} ${Math.round(r.p * 100)}%`);

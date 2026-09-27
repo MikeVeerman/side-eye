@@ -14,7 +14,6 @@ export function defaultConfig(): Config {
     extensions: [...DEFAULT_EXTENSIONS],
     sure: 0.8,
     maybe: 0.5,
-    blastRadius: ["local", "module", "service", "system-wide"],
     rules: [
       { key: "comments", label: "Comment restates the code",
         question: "Does this code change add a comment that describes what the code obviously does instead of why?" },
@@ -46,7 +45,6 @@ export function validateRules(rules: unknown): asserts rules is Rule[] {
       if (typeof r[f] !== "string" || !r[f].trim()) throw new Error(`every rule needs a "${f}"`);
     }
     if (!/^[A-Za-z0-9_]+$/.test(r.key!)) throw new Error(`key "${r.key}" may only use letters, digits and underscores`);
-    if (r.key === "blast_radius") throw new Error(`key "blast_radius" is reserved`);
     if (seen.has(r.key!)) throw new Error(`duplicate key "${r.key}"`);
     seen.add(r.key!);
   }
@@ -61,7 +59,8 @@ export function loadConfig(repo: string): Config {
   } catch (e) {
     throw new Error(`${CONFIG_FILE}: ${(e as Error).message}`);
   }
-  return { ...defaultConfig(), ...raw, rules: raw.rules };
+  const d = defaultConfig();
+  return { extensions: raw.extensions ?? d.extensions, sure: raw.sure ?? d.sure, maybe: raw.maybe ?? d.maybe, rules: raw.rules };
 }
 
 export function saveConfig(repo: string, cfg: Config): void {
