@@ -90,6 +90,17 @@ describe("server", () => {
     expect(body.findings.map((f: Finding) => f.path)).toEqual(["src/b.py", "src/a.py"]);
   });
 
+  it("filters findings by path so an agent can ask about the file it is editing", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    s.push(finding);
+    s.push({ ...finding, path: "src/b.py", at: 1700000001000 });
+    const body = await (await fetch(`${s.url}/api/findings?path=src/b.py`)).json();
+    expect(body.findings.map((f: Finding) => f.path)).toEqual(["src/b.py"]);
+    const none = await (await fetch(`${s.url}/api/findings?path=nope.py`)).json();
+    expect(none.findings).toEqual([]);
+  });
+
   it("clears older findings for the same file on a new save", async () => {
     const s = await startServer(0, cfg);
     stop = s.close;

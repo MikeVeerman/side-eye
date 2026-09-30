@@ -45,8 +45,8 @@ export function startServer(port: number, scopes: Scopes, onSave?: (dir: string)
     const url = new URL(req.url ?? "/", "http://localhost");
     if (serveUiFile(url.pathname, res)) return;
     if (url.pathname === "/api/findings") {
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ findings }));
+      const path = url.searchParams.get("path");
+      json(res, 200, { findings: path ? findings.filter((f) => f.path === path) : findings });
     } else if (url.pathname === "/api/config") {
       json(res, 200, view(scopes));
     } else if (url.pathname === "/api/rules-for") {

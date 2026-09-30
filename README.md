@@ -36,6 +36,55 @@ side-eye watch                   # re-check on save, plus a live page at http://
 side-eye watch --port 5000 --interval 2000 --no-server
 ```
 
+## For agents
+
+Claude Code or any other agent can read the flags as JSON instead of the terminal or the page.
+
+While `side-eye watch` runs, the local server answers:
+
+```
+GET http://127.0.0.1:4242/api/findings                 # every current flag, newest first
+GET http://127.0.0.1:4242/api/findings?path=src/a.ts   # just the file the agent is editing
+GET http://127.0.0.1:4242/api/rules-for?path=src/a.ts  # which rules apply to a path
+GET http://127.0.0.1:4242/api/config                   # the loaded .side-eye files
+```
+
+Without the watcher, one command does the same for the current uncommitted changes:
+
+```
+side-eye check --json
+```
+
+Both give the same shape. Each finding is one diff hunk with the rules that fired on it:
+
+```json
+{
+  "findings": [
+    {
+      "path": "src/a.ts",
+      "lines": "8-23",
+      "at": 1790499094094,
+      "rows": [
+        { "n": 1, "mark": "!!", "key": "fallback", "label": "Fallback hides missing data", "p": 0.94, "from": "" }
+      ],
+      "diff": "@@ -1,2 +8,16 @@\n+const plan = input.plan ?? \"unknown\";"
+    }
+  ],
+  "skipped": []
+}
+```
+
+`mark` is `!!` at or above the sure threshold and `maybe` between the two thresholds. `p` is
+Jev's probability. `from` is the folder whose `.side-eye` defined the rule, empty for the root.
+`diff` is exactly the hunk Jev judged.
+
+A line for the project's `CLAUDE.md`:
+
+```
+After editing source files, run `side-eye check --json` (or GET http://127.0.0.1:4242/api/findings
+if side-eye watch is running) and fix every row marked "!!" before reporting done.
+```
+
 ## The .side-eye file
 
 Committed in the target repo so the team shares one set of rules.

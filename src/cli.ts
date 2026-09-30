@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// side-eye init | check [paths...] | watch [--port N] [--interval MS]
+// side-eye init | check [paths...] [--json] | watch [--port N] [--interval MS]
 
 import { parseArgs } from "node:util";
 import { checkRepo } from "./checker.js";
@@ -12,14 +12,19 @@ import { watch } from "./watch.js";
 
 const USAGE = `usage:
   side-eye init [folder]            write a default .side-eye here, or an empty nested one in a folder
-  side-eye check [paths...]         flag uncommitted source changes (or just these files)
+  side-eye check [paths...] [--json]
+                                    flag uncommitted source changes (or just these files);
+                                    --json prints {findings, skipped} for an agent to read
   side-eye watch [--port 4242] [--interval 1000] [--no-server]
                                     re-check source files as you save them, with a local page`;
 
 async function main(argv: string[]): Promise<number> {
   const { values, positionals } = parseArgs({
     args: argv, allowPositionals: true,
-    options: { port: { type: "string", default: "4242" }, interval: { type: "string", default: "1000" }, "no-server": { type: "boolean", default: false } },
+    options: {
+      port: { type: "string", default: "4242" }, interval: { type: "string", default: "1000" },
+      "no-server": { type: "boolean", default: false }, json: { type: "boolean", default: false },
+    },
   });
   const [cmd, ...paths] = positionals;
   const repo = process.cwd();
@@ -39,6 +44,10 @@ async function main(argv: string[]): Promise<number> {
 
   if (cmd === "check") {
     const { findings, skipped } = await checkRepo(repo, client, scopes, paths.length ? paths : undefined);
+    if (values.json) {
+      console.log(JSON.stringify({ findings, skipped }, null, 2));
+      return 0;
+    }
     for (const p of skipped) console.log(`skipped ${p} (not a source file, never sent)`);
     for (const f of findings) console.log(render(f));
     return 0;
