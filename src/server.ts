@@ -2,6 +2,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { normalizeDir, rulesFor, validateRules } from "./config.js";
+import { renderReport } from "./report.js";
 import { serveUiFile } from "./ui.js";
 import type { Finding, Scopes } from "./types.js";
 
@@ -44,9 +45,13 @@ export function startServer(port: number, scopes: Scopes, onSave?: (dir: string)
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://localhost");
     if (serveUiFile(url.pathname, res)) return;
-    if (url.pathname === "/api/findings") {
-      const path = url.searchParams.get("path");
-      json(res, 200, { findings: path ? findings.filter((f) => f.path === path) : findings });
+    const path = url.searchParams.get("path");
+    const selected = path ? findings.filter((f) => f.path === path) : findings;
+    if (url.pathname === "/findings") {
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      res.end(renderReport(selected, [], scopes.root.sure, scopes.root.maybe));
+    } else if (url.pathname === "/api/findings") {
+      json(res, 200, { findings: selected });
     } else if (url.pathname === "/api/config") {
       json(res, 200, view(scopes));
     } else if (url.pathname === "/api/rules-for") {

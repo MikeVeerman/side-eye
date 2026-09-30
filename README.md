@@ -38,51 +38,39 @@ side-eye watch --port 5000 --interval 2000 --no-server
 
 ## For agents
 
-Claude Code or any other agent can read the flags as JSON instead of the terminal or the page.
-
-While `side-eye watch` runs, the local server answers:
+Claude Code or any other agent reads the same plain text you do. No JSON to parse.
 
 ```
-GET http://127.0.0.1:4242/api/findings                 # every current flag, newest first
-GET http://127.0.0.1:4242/api/findings?path=src/a.ts   # just the file the agent is editing
-GET http://127.0.0.1:4242/api/rules-for?path=src/a.ts  # which rules apply to a path
-GET http://127.0.0.1:4242/api/config                   # the loaded .side-eye files
+side-eye check                                        # current uncommitted changes
+curl http://127.0.0.1:4242/findings                   # same text while side-eye watch runs
+curl http://127.0.0.1:4242/findings?path=src/a.ts     # just the file the agent is editing
 ```
 
-Without the watcher, one command does the same for the current uncommitted changes:
+The text looks like this:
 
 ```
-side-eye check --json
+side-eye: 3 flags in 2 files. !! = sure (80% and up), maybe = uncertain (50% to 80%).
+
+src/a.ts  lines 8-23
+  1. !! Fallback hides missing data     94%  [fallback]
+  2. maybe Vague names                  61%  [naming]
+
+frontend/Button.tsx  lines 1-14
+  1. !! Inline styles used              97%  [inline_style, frontend/.side-eye]
+
+skipped (not source files, never sent): config.json
 ```
 
-Both give the same shape. Each finding is one diff hunk with the rules that fired on it:
-
-```json
-{
-  "findings": [
-    {
-      "path": "src/a.ts",
-      "lines": "8-23",
-      "at": 1790499094094,
-      "rows": [
-        { "n": 1, "mark": "!!", "key": "fallback", "label": "Fallback hides missing data", "p": 0.94, "from": "" }
-      ],
-      "diff": "@@ -1,2 +8,16 @@\n+const plan = input.plan ?? \"unknown\";"
-    }
-  ],
-  "skipped": []
-}
-```
-
-`mark` is `!!` at or above the sure threshold and `maybe` between the two thresholds. `p` is
-Jev's probability. `from` is the folder whose `.side-eye` defined the rule, empty for the root.
-`diff` is exactly the hunk Jev judged.
+The first line is the summary and the legend. Each block is one diff hunk: path, line range in
+the new file, then the rules that fired, highest first. The bracket holds the rule key and, for a
+nested rule, the `.side-eye` it came from. When nothing fired the whole output is one line:
+`side-eye: no flags.`
 
 A line for the project's `CLAUDE.md`:
 
 ```
-After editing source files, run `side-eye check --json` (or GET http://127.0.0.1:4242/api/findings
-if side-eye watch is running) and fix every row marked "!!" before reporting done.
+After editing source files, run `side-eye check` (or GET http://127.0.0.1:4242/findings if
+side-eye watch is running) and fix every row marked "!!" before reporting done.
 ```
 
 ## The .side-eye file
