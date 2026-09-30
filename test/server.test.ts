@@ -101,6 +101,24 @@ describe("server", () => {
     expect(none.findings).toEqual([]);
   });
 
+  it("serves the findings as agent-readable text at /findings, with a path filter", async () => {
+    const s = await startServer(0, cfg);
+    stop = s.close;
+    s.push(finding);
+    s.push({ ...finding, path: "src/b.py", at: 1700000001000 });
+    const r = await fetch(`${s.url}/findings`);
+    expect(r.headers.get("content-type")).toContain("text/plain");
+    const text = await r.text();
+    expect(text.split("\n")[0]).toBe("side-eye: 2 flags in 2 files. !! = sure (85% and up), maybe = uncertain (50% to 85%).");
+    expect(text).toContain("src/b.py  lines 8-23");
+    expect(text).toContain("  1. !! Network call is made          91%  [network]");
+    const one = await (await fetch(`${s.url}/findings?path=src/a.py`)).text();
+    expect(one).toContain("src/a.py");
+    expect(one).not.toContain("src/b.py");
+    const none = await (await fetch(`${s.url}/findings?path=nope.py`)).text();
+    expect(none).toBe("side-eye: no flags.");
+  });
+
   it("clears older findings for the same file on a new save", async () => {
     const s = await startServer(0, cfg);
     stop = s.close;

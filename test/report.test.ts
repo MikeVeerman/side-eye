@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classify, render, toFinding } from "../src/report.js";
+import { classify, render, renderReport, toFinding } from "../src/report.js";
 import { RULES } from "./helpers.js";
 const SCOPED = RULES.map((r) => ({ ...r, from: "" }));
 import type { Answer, Hunk } from "../src/types.js";
@@ -48,9 +48,9 @@ describe("render", () => {
     const f = toFinding(hunk, answer({ network: 0.91, auth: 0.85, secrets: 0.6 }), SCOPED, 0.8, 0.5)!;
     expect(render(f).split("\n")).toEqual([
       "src/a.py  lines 8-23",
-      "  1. !! Network call is made          91%",
-      "  2. !! Auth or permissions change    85%",
-      "  3. maybe Secret or credential is read 60%",
+      "  1. !! Network call is made          91%  [network]",
+      "  2. !! Auth or permissions change    85%  [auth]",
+      "  3. maybe Secret or credential is read 60%  [secrets]",
     ]);
   });
 });
@@ -60,6 +60,35 @@ describe("render with nested rules", () => {
     const rules = [...SCOPED, { key: "css", label: "Inline css", question: "Css?", from: "frontend" }];
     const a = { ...answer({ network: 0.91 }), flags: { ...answer().flags, network: 0.91, css: 0.95 } };
     const f = toFinding(hunk, a, rules, 0.8, 0.5)!;
-    expect(render(f).split("\n")[1]).toBe("  1. !! Inline css                    95%  (frontend/.side-eye)");
+    expect(render(f).split("\n")[1]).toBe("  1. !! Inline css                    95%  [css, frontend/.side-eye]");
+  });
+});
+
+describe("renderReport", () => {
+  it("starts with a summary and legend, then one block per finding, then skipped files", () => {
+    const a = toFinding(hunk, answer({ network: 0.91, secrets: 0.6 }), SCOPED, 0.8, 0.5)!;
+    const b = toFinding({ ...hunk, path: "src/b.py" }, answer({ auth: 0.85 }), SCOPED, 0.8, 0.5)!;
+    const out = renderReport([a, b], ["config.json"], 0.8, 0.5);
+    expect(out.split("\n")).toEqual([
+      "side-eye: 3 flags in 2 files. !! = sure (80% and up), maybe = uncertain (50% to 80%).",
+      "",
+      "src/a.py  lines 8-23",
+      "  1. !! Network call is made          91%  [network]",
+      "  2. maybe Secret or credential is read 60%  [secrets]",
+      "",
+      "src/b.py  lines 8-23",
+      "  1. !! Auth or permissions change    85%  [auth]",
+      "",
+      "skipped (not source files, never sent): config.json",
+    ]);
+  });
+
+  it("says so plainly when there is nothing", () => {
+    expect(renderReport([], [], 0.8, 0.5)).toBe("side-eye: no flags.");
+  });
+
+  it("counts one flag in one file without a plural", () => {
+    const a = toFinding(hunk, answer({ network: 0.91 }), SCOPED, 0.8, 0.5)!;
+    expect(renderReport([a], [], 0.8, 0.5).split("\n")[0]).toMatch(/^side-eye: 1 flag in 1 file\./);
   });
 });

@@ -26,8 +26,24 @@ export function render(f: Finding): string {
   const lines = [`${f.path}  lines ${f.lines}`];
   for (const r of f.rows) {
     const width = 31 - r.mark.length;
-    const from = r.from ? `  (${r.from}/.side-eye)` : "";
-    lines.push(`  ${r.n}. ${r.mark} ${r.label.padEnd(width)} ${Math.round(r.p * 100)}%${from}`);
+    const from = r.from ? `, ${r.from}/.side-eye` : "";
+    lines.push(`  ${r.n}. ${r.mark} ${r.label.padEnd(width)} ${Math.round(r.p * 100)}%  [${r.key}${from}]`);
   }
   return lines.join("\n");
+}
+
+const pct = (x: number) => `${Math.round(x * 100)}%`;
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** The whole picture as plain text, written for a coding agent: a summary with the legend, then every finding. */
+export function renderReport(findings: Finding[], skipped: string[], sure: number, maybe: number): string {
+  if (!findings.length && !skipped.length) return "side-eye: no flags.";
+  const flags = findings.reduce((n, f) => n + f.rows.length, 0);
+  const files = new Set(findings.map((f) => f.path)).size;
+  const head = flags
+    ? `side-eye: ${plural(flags, "flag")} in ${plural(files, "file")}. !! = sure (${pct(sure)} and up), maybe = uncertain (${pct(maybe)} to ${pct(sure)}).`
+    : "side-eye: no flags.";
+  const parts = [head, ...findings.map(render)];
+  if (skipped.length) parts.push(`skipped (not source files, never sent): ${skipped.join(", ")}`);
+  return parts.join("\n\n");
 }
