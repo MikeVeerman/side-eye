@@ -1,6 +1,6 @@
 {
   "name": "side-eye-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Giving agent quirks the side-eye. Flags habits of AI-written code in uncommitted changes, on your own machine, with calibrated confidence.",
   "type": "module",
   "bin": {
